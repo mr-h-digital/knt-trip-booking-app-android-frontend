@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.kntransport.app.data.AppNotification
 import com.kntransport.app.data.SampleData
+import com.kntransport.app.data.User
 import com.kntransport.app.data.UserRole
 import com.kntransport.app.ui.screens.*
 
@@ -45,6 +46,7 @@ object Routes {
     // Admin
     const val ADMIN_DASHBOARD     = "admin_dashboard"
     const val ADMIN_USERS         = "admin_users"
+    const val ADMIN_USER_DETAIL   = "admin_user_detail"
     const val ADMIN_CREATE_DRIVER = "admin_create_driver"
     const val ADMIN_ANALYTICS     = "admin_analytics"
     const val ADMIN_FINANCIALS    = "admin_financials"
@@ -65,6 +67,7 @@ fun KntNavHost(
     // Holds the selected notification so NotificationDetailScreen can read it
     // without serialising the whole object into the route.
     var selectedNotification by remember { mutableStateOf<AppNotification?>(null) }
+    var selectedAdminUser    by remember { mutableStateOf<User?>(null) }
     val start = if (showOnboarding) Routes.ONBOARDING else Routes.SPLASH
     NavHost(
         navController    = navController,
@@ -345,7 +348,23 @@ fun KntNavHost(
             AdminUsersScreen(
                 onBack         = { navController.popBackStack() },
                 onCreateDriver = { navController.navigate(Routes.ADMIN_CREATE_DRIVER) },
-                onEditUser     = { navController.popBackStack() },
+                onEditUser     = { userId ->
+                    selectedAdminUser = adminSampleUsers.find { it.id == userId }
+                    navController.navigate(Routes.ADMIN_USER_DETAIL)
+                },
+            )
+        }
+
+        composable(Routes.ADMIN_USER_DETAIL) {
+            val user = selectedAdminUser
+            if (user == null) {
+                navController.popBackStack()
+                return@composable
+            }
+            AdminUserDetailScreen(
+                user   = user,
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.popBackStack() },
             )
         }
 

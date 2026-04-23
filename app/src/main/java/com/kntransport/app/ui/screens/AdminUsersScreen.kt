@@ -21,7 +21,7 @@ import com.kntransport.app.data.UserRole
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 
-private val sampleUsers = listOf(
+val adminSampleUsers = listOf(
     User("u1",  "Tayla Hendricks",  "tayla@email.com",            "072 345 6789",   UserRole.COMMUTER),
     User("u2",  "Nadia Adams",      "nadia@email.com",            "083 456 7890",   UserRole.COMMUTER),
     User("u3",  "Yusuf Daniels",    "yusuf@email.com",            "071 567 8901",   UserRole.COMMUTER),
@@ -42,9 +42,9 @@ fun AdminUsersScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val filtered = when (selectedTab) {
-        1 -> sampleUsers.filter { it.role == UserRole.COMMUTER }
-        2 -> sampleUsers.filter { it.role == UserRole.DRIVER }
-        else -> sampleUsers
+        1 -> adminSampleUsers.filter { it.role == UserRole.COMMUTER }
+        2 -> adminSampleUsers.filter { it.role == UserRole.DRIVER }
+        else -> adminSampleUsers
     }
 
     KntScaffold(
