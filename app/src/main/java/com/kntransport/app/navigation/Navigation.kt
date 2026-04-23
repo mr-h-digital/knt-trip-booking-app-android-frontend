@@ -34,6 +34,14 @@ object Routes {
     const val EDIT_PROFILE    = "edit_profile"
     const val RATE_TRIP       = "rate_trip/{tripId}"
 
+    // Driver
+    const val DRIVER_DASHBOARD    = "driver_dashboard"
+    const val DRIVER_TRIPS        = "driver_trips"
+    const val DRIVER_TRIP_DETAIL  = "driver_trip_detail/{tripId}"
+    const val DRIVER_EARNINGS     = "driver_earnings"
+
+    fun driverTripDetail(id: String) = "driver_trip_detail/$id"
+
     // Admin
     const val ADMIN_DASHBOARD     = "admin_dashboard"
     const val ADMIN_USERS         = "admin_users"
@@ -100,8 +108,9 @@ fun KntNavHost(
                         else            -> SampleData.currentUser
                     }
                     val dest = when (role) {
-                        UserRole.ADMIN -> Routes.ADMIN_DASHBOARD
-                        else           -> Routes.HOME
+                        UserRole.ADMIN  -> Routes.ADMIN_DASHBOARD
+                        UserRole.DRIVER -> Routes.DRIVER_DASHBOARD
+                        else            -> Routes.HOME
                     }
                     navController.navigate(dest) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
@@ -278,6 +287,43 @@ fun KntNavHost(
                 onBack  = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() },
             )
+        }
+
+        // ── Driver ────────────────────────────────────────────────────────────
+
+        composable(Routes.DRIVER_DASHBOARD) {
+            DriverDashboardScreen(
+                onBack         = {
+                    navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
+                onMyTrips      = { navController.navigate(Routes.DRIVER_TRIPS) },
+                onEarnings     = { navController.navigate(Routes.DRIVER_EARNINGS) },
+                onProfile      = { navController.navigate(Routes.PROFILE) },
+                onNotifications= { navController.navigate(Routes.NOTIFICATIONS) },
+                onTripDetail   = { id -> navController.navigate(Routes.driverTripDetail(id)) },
+            )
+        }
+
+        composable(Routes.DRIVER_TRIPS) {
+            DriverTripsScreen(
+                onBack       = { navController.popBackStack() },
+                onTripDetail = { id -> navController.navigate(Routes.driverTripDetail(id)) },
+            )
+        }
+
+        composable(
+            route     = Routes.DRIVER_TRIP_DETAIL,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+        ) { back ->
+            val tripId = back.arguments?.getString("tripId") ?: return@composable
+            DriverTripDetailScreen(
+                tripId = tripId,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.DRIVER_EARNINGS) {
+            DriverEarningsScreen(onBack = { navController.popBackStack() })
         }
 
         // ── Admin ─────────────────────────────────────────────────────────────
