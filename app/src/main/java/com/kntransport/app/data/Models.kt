@@ -76,6 +76,23 @@ data class LiftClubSubscription(
     val quoteAccepted: Boolean? = null,
 )
 
+// ── Vehicle ───────────────────────────────────────────────────────────────────
+enum class VehicleType { SEDAN, SUV, MINIBUS, BUS }
+
+data class Vehicle(
+    val id               : String,
+    val make             : String,
+    val model            : String,
+    val colour           : String,
+    val plate            : String,
+    val year             : Int,
+    val vehicleType      : VehicleType = VehicleType.MINIBUS,
+    val photoUrl         : String? = null,
+    val active           : Boolean = true,
+    val notes            : String = "",
+    val assignedDriverId : String? = null,
+)
+
 // ── Quote ─────────────────────────────────────────────────────────────────────
 data class Quote(
     val id           : String,
@@ -300,6 +317,12 @@ object SampleData {
             vehicleInfo  = "Toyota HiAce — White",
             description = "Active lift club. Fortnightly billing via EFT or cash.",
         ),
+    )
+
+    val vehicles = listOf(
+        Vehicle("v1", "Toyota", "HiAce",    "White",  "CA 456 789", 2021, VehicleType.MINIBUS, assignedDriverId = "d1"),
+        Vehicle("v2", "Toyota", "HiAce",    "Silver", "CA 123 456", 2022, VehicleType.MINIBUS),
+        Vehicle("v3", "Toyota", "Quantum",  "White",  "CA 789 012", 2020, VehicleType.MINIBUS, assignedDriverId = "d2"),
     )
 
     val myLiftClubSubscriptions = listOf("lc1", "lc4")

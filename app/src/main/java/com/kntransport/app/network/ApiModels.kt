@@ -25,12 +25,19 @@ data class AuthResponse(
 // ── User ──────────────────────────────────────────────────────────────────────
 
 data class UserDto(
-    @SerializedName("id")        val id        : String,
-    @SerializedName("name")      val name      : String,
-    @SerializedName("email")     val email     : String,
-    @SerializedName("phone")     val phone     : String,
-    @SerializedName("role")      val role      : String,
-    @SerializedName("avatarUrl") val avatarUrl : String? = null,
+    @SerializedName("id")                    val id                    : String,
+    @SerializedName("name")                  val name                  : String,
+    @SerializedName("email")                 val email                 : String,
+    @SerializedName("phone")                 val phone                 : String,
+    @SerializedName("role")                  val role                  : String,
+    @SerializedName("avatarUrl")             val avatarUrl             : String? = null,
+    @SerializedName("currentVehicleId")      val currentVehicleId      : String? = null,
+    @SerializedName("currentVehicleMake")    val currentVehicleMake    : String? = null,
+    @SerializedName("currentVehicleModel")   val currentVehicleModel   : String? = null,
+    @SerializedName("currentVehicleColour")  val currentVehicleColour  : String? = null,
+    @SerializedName("currentVehiclePlate")   val currentVehiclePlate   : String? = null,
+    @SerializedName("currentVehicleType")    val currentVehicleType    : String? = null,
+    @SerializedName("currentVehiclePhotoUrl")val currentVehiclePhotoUrl: String? = null,
 )
 
 data class UpdateProfileRequest(
@@ -51,9 +58,19 @@ data class TripBookingDto(
     @SerializedName("notes")          val notes          : String = "",
     @SerializedName("status")         val status         : String,
     @SerializedName("quotedAmount")   val quotedAmount   : Double? = null,
+    @SerializedName("commuterName")   val commuterName   : String? = null,
+    @SerializedName("commuterPhone")  val commuterPhone  : String? = null,
     @SerializedName("driverName")     val driverName     : String? = null,
+    @SerializedName("driverId")       val driverId       : String? = null,
+    @SerializedName("vehicleId")      val vehicleId      : String? = null,
+    @SerializedName("vehicleMake")    val vehicleMake    : String? = null,
+    @SerializedName("vehicleModel")   val vehicleModel   : String? = null,
+    @SerializedName("vehicleColour")  val vehicleColour  : String? = null,
+    @SerializedName("vehicleType")    val vehicleType    : String? = null,
+    @SerializedName("vehiclePhotoUrl")val vehiclePhotoUrl: String? = null,
     @SerializedName("vehicleInfo")    val vehicleInfo    : String? = null,
     @SerializedName("vehiclePlate")   val vehiclePlate   : String? = null,
+    @SerializedName("rating")         val rating         : Int? = null,
 )
 
 data class CreateTripRequest(
@@ -120,6 +137,50 @@ data class NotificationDto(
     @SerializedName("read")          val read          : Boolean = false,
     @SerializedName("referenceId")   val referenceId   : String? = null,
     @SerializedName("referenceType") val referenceType : String? = null,
+)
+
+// ── Vehicle ───────────────────────────────────────────────────────────────────
+
+data class VehicleDto(
+    @SerializedName("id")                 val id                 : String,
+    @SerializedName("make")               val make               : String,
+    @SerializedName("model")              val model              : String,
+    @SerializedName("colour")             val colour             : String,
+    @SerializedName("plate")              val plate              : String,
+    @SerializedName("year")               val year               : Int,
+    @SerializedName("vehicleType")        val vehicleType        : String,
+    @SerializedName("photoUrl")           val photoUrl           : String? = null,
+    @SerializedName("active")             val active             : Boolean = true,
+    @SerializedName("notes")              val notes              : String = "",
+    @SerializedName("assignedDriverId")   val assignedDriverId   : String? = null,
+    @SerializedName("assignedDriverName") val assignedDriverName : String? = null,
+)
+
+data class CreateVehicleRequest(
+    @SerializedName("make")        val make        : String,
+    @SerializedName("model")       val model       : String,
+    @SerializedName("colour")      val colour      : String,
+    @SerializedName("plate")       val plate       : String,
+    @SerializedName("year")        val year        : Int,
+    @SerializedName("vehicleType") val vehicleType : String = "MINIBUS",
+    @SerializedName("photoUrl")    val photoUrl    : String? = null,
+    @SerializedName("notes")       val notes       : String = "",
+)
+
+data class AssignVehicleRequest(
+    @SerializedName("vehicleId") val vehicleId : String?,
+)
+
+data class UpdateTripStatusRequest(
+    @SerializedName("status") val status : String,
+)
+
+data class DriverEarningsDto(
+    @SerializedName("totalEarnings")          val totalEarnings          : Double,
+    @SerializedName("completedTrips")         val completedTrips         : Long,
+    @SerializedName("confirmedTrips")         val confirmedTrips         : Long,
+    @SerializedName("inProgressTrips")        val inProgressTrips        : Long,
+    @SerializedName("averageEarningsPerTrip") val averageEarningsPerTrip : Double,
 )
 
 // ── Generic wrapper ───────────────────────────────────────────────────────────

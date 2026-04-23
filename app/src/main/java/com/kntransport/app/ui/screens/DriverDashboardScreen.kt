@@ -248,6 +248,68 @@ fun DriverDashboardScreen(
                     )
                 }
 
+                // ── My Vehicle ───────────────────────────────────────────
+                Spacer(Modifier.height(24.dp))
+                SectionHeader(title = "My Vehicle")
+                Spacer(Modifier.height(10.dp))
+                val assignedVehicle = SampleData.vehicles.firstOrNull { it.assignedDriverId == driver.id }
+                if (assignedVehicle != null) {
+                    Surface(
+                        shape  = RoundedCornerShape(14.dp),
+                        color  = c.surface2,
+                        border = BorderStroke(1.dp, c.yellow.copy(0.3f)),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                                    .background(c.yellow.copy(0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(24.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "${assignedVehicle.colour} ${assignedVehicle.make} ${assignedVehicle.model}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = c.textBright,
+                                )
+                                Text(
+                                    "${assignedVehicle.vehicleType.name.lowercase().replaceFirstChar { it.uppercase() }} · ${assignedVehicle.year}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = c.textMuted,
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = c.blue.copy(0.12f),
+                                border = BorderStroke(1.dp, c.blue.copy(0.3f)),
+                            ) {
+                                Text(
+                                    assignedVehicle.plate,
+                                    style    = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    color    = c.blue,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape  = RoundedCornerShape(14.dp),
+                        color  = c.surface2,
+                        border = BorderStroke(1.dp, c.borderColor),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text("No vehicle assigned yet", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                        }
+                    }
+                }
+
                 // ── Today's schedule ──────────────────────────────────────
                 if (todayTrips.isNotEmpty()) {
                     Spacer(Modifier.height(24.dp))

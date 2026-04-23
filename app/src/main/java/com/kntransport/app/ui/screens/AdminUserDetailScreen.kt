@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.R
+import com.kntransport.app.data.SampleData
 import com.kntransport.app.data.User
 import com.kntransport.app.data.UserRole
 import com.kntransport.app.ui.components.*
@@ -23,9 +24,10 @@ import com.kntransport.app.ui.theme.*
 
 @Composable
 fun AdminUserDetailScreen(
-    user    : User,
-    onBack  : () -> Unit,
-    onEdit  : () -> Unit = {},
+    user          : User,
+    onBack        : () -> Unit,
+    onEdit        : () -> Unit = {},
+    onAssignVehicle: () -> Unit = {},
 ) {
     val c = LocalAppColors.current
 
@@ -193,6 +195,69 @@ fun AdminUserDetailScreen(
                             UserActivityRow(Icons.Rounded.People,              "Users Managed", "7",  c.blue)
                             KntDivider()
                             UserActivityRow(Icons.Rounded.AdminPanelSettings,  "Role",          "Administrator", KntOrange)
+                        }
+                    }
+                }
+
+                // ── Assigned Vehicle (drivers only) ──────────────────────
+                if (user.role == UserRole.DRIVER) {
+                    Spacer(Modifier.height(16.dp))
+                    SectionHeader(title = "Assigned Vehicle")
+                    val vehicle = SampleData.vehicles.firstOrNull { it.assignedDriverId == user.id }
+                    if (vehicle != null) {
+                        KntCard {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(c.yellow.copy(0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(22.dp))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "${vehicle.colour} ${vehicle.make} ${vehicle.model}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = c.textBright,
+                                    )
+                                    Text(
+                                        "${vehicle.plate} · ${vehicle.year}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = c.textMuted,
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = StatusGreen.copy(0.12f),
+                                ) {
+                                    Text(
+                                        "Assigned",
+                                        style    = MaterialTheme.typography.labelSmall,
+                                        color    = StatusGreen,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Surface(
+                            shape    = RoundedCornerShape(14.dp),
+                            color    = c.surface2,
+                            border   = BorderStroke(1.dp, KntOrange.copy(0.3f)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text("No vehicle assigned", style = MaterialTheme.typography.bodyMedium, color = c.textMuted, modifier = Modifier.weight(1f))
+                                TextButton(onClick = onAssignVehicle) {
+                                    Text("Assign", style = MaterialTheme.typography.labelMedium, color = KntOrange)
+                                }
+                            }
                         }
                     }
                 }

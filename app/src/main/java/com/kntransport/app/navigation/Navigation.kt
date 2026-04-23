@@ -12,6 +12,7 @@ import com.kntransport.app.data.AppNotification
 import com.kntransport.app.data.SampleData
 import com.kntransport.app.data.User
 import com.kntransport.app.data.UserRole
+import com.kntransport.app.data.Vehicle
 import com.kntransport.app.ui.screens.*
 
 object Routes {
@@ -44,12 +45,15 @@ object Routes {
     fun driverTripDetail(id: String) = "driver_trip_detail/$id"
 
     // Admin
-    const val ADMIN_DASHBOARD     = "admin_dashboard"
-    const val ADMIN_USERS         = "admin_users"
-    const val ADMIN_USER_DETAIL   = "admin_user_detail"
-    const val ADMIN_CREATE_DRIVER = "admin_create_driver"
-    const val ADMIN_ANALYTICS     = "admin_analytics"
-    const val ADMIN_FINANCIALS    = "admin_financials"
+    const val ADMIN_DASHBOARD      = "admin_dashboard"
+    const val ADMIN_USERS          = "admin_users"
+    const val ADMIN_USER_DETAIL    = "admin_user_detail"
+    const val ADMIN_CREATE_DRIVER  = "admin_create_driver"
+    const val ADMIN_ANALYTICS      = "admin_analytics"
+    const val ADMIN_FINANCIALS     = "admin_financials"
+    const val ADMIN_FLEET          = "admin_fleet"
+    const val ADMIN_VEHICLE_DETAIL = "admin_vehicle_detail"
+    const val ADMIN_ADD_VEHICLE    = "admin_add_vehicle"
 
     fun rateTrip(id: String) = "rate_trip/$id"
 
@@ -68,6 +72,7 @@ fun KntNavHost(
     // without serialising the whole object into the route.
     var selectedNotification by remember { mutableStateOf<AppNotification?>(null) }
     var selectedAdminUser    by remember { mutableStateOf<User?>(null) }
+    var selectedVehicle      by remember { mutableStateOf<Vehicle?>(null) }
     val start = if (showOnboarding) Routes.ONBOARDING else Routes.SPLASH
     NavHost(
         navController    = navController,
@@ -340,6 +345,7 @@ fun KntNavHost(
                 onTrips      = { navController.navigate(Routes.MY_TRIPS) },
                 onAnalytics  = { navController.navigate(Routes.ADMIN_ANALYTICS) },
                 onFinancials = { navController.navigate(Routes.ADMIN_FINANCIALS) },
+                onFleet      = { navController.navigate(Routes.ADMIN_FLEET) },
                 onProfile    = { navController.navigate(Routes.PROFILE) },
             )
         }
@@ -385,6 +391,41 @@ fun KntNavHost(
 
         composable(Routes.ADMIN_FINANCIALS) {
             AdminFinancialsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.ADMIN_FLEET) {
+            AdminFleetScreen(
+                onBack          = { navController.popBackStack() },
+                onVehicleDetail = { vehicleId ->
+                    selectedVehicle = SampleData.vehicles.find { it.id == vehicleId }
+                    navController.navigate(Routes.ADMIN_VEHICLE_DETAIL)
+                },
+                onAddVehicle    = { navController.navigate(Routes.ADMIN_ADD_VEHICLE) },
+            )
+        }
+
+        composable(Routes.ADMIN_VEHICLE_DETAIL) {
+            val vehicle = selectedVehicle
+            if (vehicle == null) {
+                navController.popBackStack()
+                return@composable
+            }
+            AdminVehicleDetailScreen(
+                vehicle        = vehicle,
+                onBack         = { navController.popBackStack() },
+                onAssignDriver = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.ADMIN_ADD_VEHICLE) {
+            AdminAddVehicleScreen(
+                onBack  = { navController.popBackStack() },
+                onAdded = {
+                    navController.navigate(Routes.ADMIN_FLEET) {
+                        popUpTo(Routes.ADMIN_FLEET) { inclusive = true }
+                    }
+                },
+            )
         }
     }
 }

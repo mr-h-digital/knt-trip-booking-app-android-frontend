@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
+import com.kntransport.app.data.Vehicle
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.AdminNavTab
 import com.kntransport.app.ui.components.NavTabItem
@@ -29,6 +30,7 @@ fun AdminDashboardScreen(
     onTrips       : () -> Unit,
     onAnalytics   : () -> Unit,
     onFinancials  : () -> Unit,
+    onFleet       : () -> Unit = {},
     onProfile     : () -> Unit = {},
 ) {
     val c           = LocalAppColors.current
@@ -46,8 +48,8 @@ fun AdminDashboardScreen(
                     selectedTab = idx
                     when (idx) {
                         1 -> onUsers()
-                        2 -> onAnalytics()
-                        3 -> onFinancials()
+                        2 -> onFleet()
+                        3 -> onAnalytics()
                         4 -> onProfile()
                         else -> {}
                     }
@@ -119,8 +121,28 @@ fun AdminDashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                AdminStatCard("5",        "Pending Quotes",  Icons.Rounded.RequestQuote, KntOrange,   Modifier.weight(1f))
-                AdminStatCard("R12,450",  "Total Revenue",   Icons.Rounded.Payments,     StatusGreen, Modifier.weight(1f), isMonetary = true)
+                AdminStatCard("5",        "Pending Quotes",  Icons.Rounded.RequestQuote, KntOrange,     Modifier.weight(1f))
+                AdminStatCard("R12,450",  "Total Revenue",   Icons.Rounded.Payments,     StatusGreen,   Modifier.weight(1f), isMonetary = true)
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                AdminStatCard(
+                    value    = SampleData.vehicles.size.toString(),
+                    label    = "Fleet Size",
+                    icon     = Icons.Rounded.DirectionsBus,
+                    tint     = KntBlueBright,
+                    modifier = Modifier.weight(1f),
+                )
+                AdminStatCard(
+                    value    = SampleData.vehicles.count { it.assignedDriverId != null }.toString(),
+                    label    = "Assigned",
+                    icon     = Icons.Rounded.PersonCheck,
+                    tint     = c.yellow,
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -157,6 +179,14 @@ fun AdminDashboardScreen(
                 subtitle = "Revenue, transactions & export reports",
                 tint     = StatusGreen,
                 onClick  = onFinancials,
+            )
+            Spacer(Modifier.height(10.dp))
+            AdminNavCard(
+                icon     = Icons.Rounded.DirectionsBus,
+                title    = "Fleet",
+                subtitle = "Manage vehicles & driver assignments",
+                tint     = KntBlueBright,
+                onClick  = onFleet,
             )
 
             Spacer(Modifier.height(32.dp))

@@ -178,7 +178,7 @@ fun TripDetailScreen(
                 }
             }
 
-            // ── Driver info ───────────────────────────────────────────────
+            // ── Driver & vehicle info ─────────────────────────────────────
             if (trip.driverName != null) {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "Your Driver")
@@ -188,7 +188,14 @@ fun TripDetailScreen(
                             Modifier.size(48.dp).clip(CircleShape).background(c.blue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Rounded.Person, null, tint = c.blue, modifier = Modifier.size(26.dp))
+                            val initials = trip.driverName.split(" ")
+                                .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
+                            if (initials.isNotEmpty()) {
+                                Text(initials, style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = c.blue)
+                            } else {
+                                Icon(Icons.Rounded.Person, null, tint = c.blue, modifier = Modifier.size(26.dp))
+                            }
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
@@ -196,9 +203,52 @@ fun TripDetailScreen(
                             Text("K&T Transport Driver", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         }
                     }
-                    KntDivider()
-                    InfoRow(Icons.Rounded.DirectionsCar,      "Vehicle", trip.vehicleInfo ?: "")
-                    InfoRow(Icons.Rounded.ConfirmationNumber, "Plate",   trip.vehiclePlate ?: "")
+                    // ── Vehicle card (Uber-style) ─────────────────────────
+                    if (trip.vehicleInfo != null || trip.vehiclePlate != null) {
+                        KntDivider()
+                        val vehicle = SampleData.driverTrips.find { it.id == trip.id }
+                        val vehicleDisplay = trip.vehicleInfo ?: ""
+                        val plateDisplay   = trip.vehiclePlate ?: ""
+                        Surface(
+                            shape  = RoundedCornerShape(10.dp),
+                            color  = c.surface1,
+                            border = BorderStroke(1.dp, c.borderColor),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(c.yellow.copy(0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(20.dp))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(vehicleDisplay, style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                                    Text("Assigned vehicle", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                                }
+                                if (plateDisplay.isNotEmpty()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = c.blue.copy(0.12f),
+                                        border = BorderStroke(1.dp, c.blue.copy(0.3f)),
+                                    ) {
+                                        Text(
+                                            plateDisplay,
+                                            style    = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                            color    = c.blue,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

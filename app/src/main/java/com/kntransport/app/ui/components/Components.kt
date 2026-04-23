@@ -269,8 +269,8 @@ enum class DriverNavTab(val label: String, val icon: ImageVector) {
 enum class AdminNavTab(val label: String, val icon: ImageVector) {
     DASHBOARD   ("Dashboard",   Icons.Rounded.Home),
     USERS       ("Users",       Icons.Rounded.People),
+    FLEET       ("Fleet",       Icons.Rounded.DirectionsBus),
     ANALYTICS   ("Analytics",   Icons.Rounded.BarChart),
-    FINANCIALS  ("Financials",  Icons.Rounded.AccountBalance),
     PROFILE     ("Profile",     Icons.Rounded.Person),
 }
 

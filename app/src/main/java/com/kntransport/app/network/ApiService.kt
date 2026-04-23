@@ -63,6 +63,41 @@ interface ApiService {
         @Body request: QuoteAcceptRequest,
     ): Response<QuoteDto>
 
+    // ── Admin — Fleet ─────────────────────────────────────────────────────────
+    @GET("api/admin/vehicles")
+    suspend fun getVehicles(@Query("active") active: Boolean? = null): Response<List<VehicleDto>>
+
+    @GET("api/admin/vehicles/{id}")
+    suspend fun getVehicle(@Path("id") id: String): Response<VehicleDto>
+
+    @POST("api/admin/vehicles")
+    suspend fun createVehicle(@Body request: CreateVehicleRequest): Response<VehicleDto>
+
+    @PUT("api/admin/vehicles/{id}")
+    suspend fun updateVehicle(@Path("id") id: String, @Body request: CreateVehicleRequest): Response<VehicleDto>
+
+    @DELETE("api/admin/vehicles/{id}")
+    suspend fun deactivateVehicle(@Path("id") id: String): Response<Unit>
+
+    @PATCH("api/admin/drivers/{driverId}/assign-vehicle")
+    suspend fun assignVehicle(@Path("driverId") driverId: String, @Body request: AssignVehicleRequest): Response<UserDto>
+
+    // ── Driver API ─────────────────────────────────────────────────────────────
+    @GET("api/driver/trips")
+    suspend fun getDriverTrips(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+    ): Response<PagedResponse<TripBookingDto>>
+
+    @GET("api/driver/trips/{id}")
+    suspend fun getDriverTrip(@Path("id") id: String): Response<TripBookingDto>
+
+    @PATCH("api/driver/trips/{id}/status")
+    suspend fun updateTripStatus(@Path("id") id: String, @Body request: UpdateTripStatusRequest): Response<TripBookingDto>
+
+    @GET("api/driver/earnings")
+    suspend fun getDriverEarnings(): Response<DriverEarningsDto>
+
     // ── Notifications ─────────────────────────────────────────────────────────
     @GET("api/notifications")
     suspend fun getNotifications(
