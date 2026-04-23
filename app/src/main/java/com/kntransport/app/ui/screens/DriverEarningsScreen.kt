@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.draw.clip
+import com.kntransport.app.R
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -47,9 +49,24 @@ fun DriverEarningsScreen(onBack: () -> Unit) {
     KntScaffold(title = "Earnings", onBack = onBack) { pv ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pv)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg_6, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
+                    Text(
+                        "Track your income",
+                        style = MaterialTheme.typography.labelMedium.copy(color = KntYellow, letterSpacing = 0.5.sp),
+                    )
+                }
+            }
+
+            Column(Modifier.padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(16.dp))
 
             // Period selector
@@ -146,6 +163,7 @@ fun DriverEarningsScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(32.dp))
+            } // close inner padding Column
         }
     }
 }

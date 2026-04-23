@@ -10,6 +10,8 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.draw.clip
+import com.kntransport.app.R
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -38,6 +40,21 @@ fun DriverTripsScreen(
 
     KntScaffold(title = "My Trips", onBack = onBack) { pv ->
         Column(Modifier.fillMaxSize().padding(pv)) {
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg_7, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
+                    Text(
+                        "Your assigned trips",
+                        style = MaterialTheme.typography.labelMedium.copy(color = KntYellow, letterSpacing = 0.5.sp),
+                    )
+                }
+            }
 
             ScrollableTabRow(
                 selectedTabIndex = selectedTab,
