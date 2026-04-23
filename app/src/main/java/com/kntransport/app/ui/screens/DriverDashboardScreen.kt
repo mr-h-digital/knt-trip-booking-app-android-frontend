@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
+import com.kntransport.app.ui.components.DriverNavTab
+import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
 import java.time.format.DateTimeFormatter
 
@@ -29,13 +31,16 @@ fun DriverDashboardScreen(
     onNotifications: () -> Unit,
     onTripDetail  : (String) -> Unit,
 ) {
-    val c           = LocalAppColors.current
-    val driver      = SampleData.currentUser
-    val allTrips    = SampleData.driverTrips
-    val todayTrips  = allTrips.filter { it.date == java.time.LocalDate.now() }
-    val activeTrip  = todayTrips.firstOrNull { it.status == TripStatus.IN_PROGRESS }
-    val nextTrip    = todayTrips.firstOrNull { it.status == TripStatus.CONFIRMED || it.status == TripStatus.QUOTE_ACCEPTED }
-    val unreadCount = SampleData.notifications.count { !it.read }
+    val c            = LocalAppColors.current
+    val driver       = SampleData.currentUser
+    val allTrips     = SampleData.driverTrips
+    val todayTrips   = allTrips.filter { it.date == java.time.LocalDate.now() }
+    val activeTrip   = todayTrips.firstOrNull { it.status == TripStatus.IN_PROGRESS }
+    val nextTrip     = todayTrips.firstOrNull { it.status == TripStatus.CONFIRMED || it.status == TripStatus.QUOTE_ACCEPTED }
+    val unreadCount  = SampleData.notifications.count { !it.read }
+    var selectedTab  by remember { mutableIntStateOf(0) }
+
+    val driverTabs = DriverNavTab.entries.map { NavTabItem(it.label, it.icon) }
 
     val pulseAnim = rememberInfiniteTransition(label = "pulse")
     val pulseScale by pulseAnim.animateFloat(
@@ -54,6 +59,21 @@ fun DriverDashboardScreen(
     ) {
         Scaffold(
             containerColor = Color.Transparent,
+            bottomBar = {
+                RoleBottomNav(
+                    tabs     = driverTabs,
+                    selected = selectedTab,
+                    onSelect = { idx ->
+                        selectedTab = idx
+                        when (idx) {
+                            1 -> onMyTrips()
+                            2 -> onEarnings()
+                            3 -> onProfile()
+                            else -> {}
+                        }
+                    },
+                )
+            },
             topBar = {
                 Box(Modifier.fillMaxWidth().wrapContentHeight()) {
                     Box(

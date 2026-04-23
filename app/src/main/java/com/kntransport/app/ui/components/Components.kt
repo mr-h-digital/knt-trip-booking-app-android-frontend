@@ -44,12 +44,14 @@ fun KntScaffold(
     onBack       : (() -> Unit)? = null,
     actions      : @Composable RowScope.() -> Unit = {},
     snackbarHost : @Composable () -> Unit = {},
+    bottomBar    : @Composable () -> Unit = {},
     content      : @Composable (PaddingValues) -> Unit,
 ) {
     val c = LocalAppColors.current
     Scaffold(
         containerColor = Color.Transparent,
         snackbarHost   = snackbarHost,
+        bottomBar      = bottomBar,
         modifier = Modifier.background(
             Brush.linearGradient(
                 listOf(c.bgGradientTop, c.bgGradientMid, c.bgGradientBottom),
@@ -255,6 +257,106 @@ enum class KntNavTab(val label: String, val icon: ImageVector, val selectedIcon:
     TRIPS     ("My Trips",   Icons.Rounded.DirectionsBus, Icons.Rounded.DirectionsBus),
     LIFT_CLUBS("Lift Clubs", Icons.Rounded.Groups,        Icons.Rounded.Groups),
     PROFILE   ("Profile",    Icons.Rounded.Person,        Icons.Rounded.Person),
+}
+
+enum class DriverNavTab(val label: String, val icon: ImageVector) {
+    HOME        ("Home",        Icons.Rounded.Home),
+    TRIPS       ("Trips",       Icons.Rounded.DirectionsBus),
+    EARNINGS    ("Earnings",    Icons.Rounded.Payments),
+    PROFILE     ("Profile",     Icons.Rounded.Person),
+}
+
+enum class AdminNavTab(val label: String, val icon: ImageVector) {
+    DASHBOARD   ("Dashboard",   Icons.Rounded.Home),
+    USERS       ("Users",       Icons.Rounded.People),
+    ANALYTICS   ("Analytics",   Icons.Rounded.BarChart),
+    FINANCIALS  ("Financials",  Icons.Rounded.AccountBalance),
+}
+
+// ── Generic role bottom nav (Driver / Admin) ──────────────────────────────────
+
+data class NavTabItem(val label: String, val icon: ImageVector)
+
+@Composable
+fun RoleBottomNav(
+    tabs     : List<NavTabItem>,
+    selected : Int,
+    onSelect : (Int) -> Unit,
+    modifier : Modifier = Modifier,
+) {
+    val c = LocalAppColors.current
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(c.navBackground),
+    ) {
+        Box(
+            Modifier.fillMaxWidth().height(1.dp).background(
+                Brush.horizontalGradient(listOf(
+                    Color.Transparent, c.yellow.copy(0.5f), c.blue.copy(0.7f), Color.Transparent,
+                ))
+            )
+        )
+
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth().padding(top = 1.dp),
+        ) {
+            val tabWidth  = maxWidth / tabs.size
+            val pillWidth = tabWidth * 0.74f
+            val pillX by animateDpAsState(
+                targetValue   = tabWidth * selected + (tabWidth - pillWidth) / 2,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label         = "roleNavPill",
+            )
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 5.dp)
+                    .offset(x = pillX)
+                    .width(pillWidth).height(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Brush.linearGradient(listOf(c.yellow.copy(0.14f), c.blue.copy(0.07f))))
+            )
+            val haptics = LocalHapticFeedback.current
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .navigationBarsPadding(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { i, tab ->
+                    val sel   = i == selected
+                    val tint  by animateColorAsState(
+                        targetValue   = if (sel) c.yellow else c.textMuted,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                        label         = "roleNavTint$i",
+                    )
+                    val scale by animateFloatAsState(
+                        targetValue   = if (sel) 1.10f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                        label         = "roleNavScale$i",
+                    )
+                    Column(
+                        modifier = Modifier
+                            .scale(scale)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSelect(i)
+                            }
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Icon(tab.icon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                        Text(tab.label, style = MaterialTheme.typography.labelSmall, color = tint)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ── Bottom nav with animated sliding pill ─────────────────────────────────────

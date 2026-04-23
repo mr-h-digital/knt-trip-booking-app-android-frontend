@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.data.SampleData
 import com.kntransport.app.ui.components.*
+import com.kntransport.app.ui.components.AdminNavTab
+import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
 
 @Composable
@@ -27,10 +29,30 @@ fun AdminDashboardScreen(
     onAnalytics   : () -> Unit,
     onFinancials  : () -> Unit,
 ) {
-    val c    = LocalAppColors.current
-    val user = SampleData.currentUser
+    val c           = LocalAppColors.current
+    val user        = SampleData.currentUser
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val adminTabs   = AdminNavTab.entries.map { NavTabItem(it.label, it.icon) }
 
-    KntScaffold(title = "Admin Dashboard", onBack = onBack) { pv ->
+    KntScaffold(
+        title     = "Admin Dashboard",
+        onBack    = onBack,
+        bottomBar = {
+            RoleBottomNav(
+                tabs     = adminTabs,
+                selected = selectedTab,
+                onSelect = { idx ->
+                    selectedTab = idx
+                    when (idx) {
+                        1 -> onUsers()
+                        2 -> onAnalytics()
+                        3 -> onFinancials()
+                        else -> {}
+                    }
+                },
+            )
+        },
+    ) { pv ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
