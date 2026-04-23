@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.kntransport.app.R
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.DriverNavTab
@@ -80,17 +81,9 @@ fun DriverDashboardScreen(
                         modifier = Modifier.fillMaxWidth().height(200.dp)
                             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
                     ) {
+                        HeroBgImage(resId = R.drawable.hero_bg_2, modifier = Modifier.fillMaxSize(), darkOverlay = 0.55f)
                         Box(Modifier.fillMaxSize().background(
-                            Brush.linearGradient(listOf(KntDark, Color(0xFF0D3A6A), KntBlue.copy(0.7f)))
-                        ))
-                        Box(Modifier.fillMaxSize().background(
-                            Brush.radialGradient(
-                                listOf(KntYellow.copy(0.08f), Color.Transparent),
-                                center = Offset(Float.POSITIVE_INFINITY, 0f), radius = 600f,
-                            )
-                        ))
-                        Box(Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.45f)))
+                            Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.5f)))
                         ))
                         Column(
                             Modifier.align(Alignment.BottomStart)
