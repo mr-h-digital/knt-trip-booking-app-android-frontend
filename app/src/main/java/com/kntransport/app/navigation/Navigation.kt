@@ -34,6 +34,13 @@ object Routes {
     const val EDIT_PROFILE    = "edit_profile"
     const val RATE_TRIP       = "rate_trip/{tripId}"
 
+    // Admin
+    const val ADMIN_DASHBOARD     = "admin_dashboard"
+    const val ADMIN_USERS         = "admin_users"
+    const val ADMIN_CREATE_DRIVER = "admin_create_driver"
+    const val ADMIN_ANALYTICS     = "admin_analytics"
+    const val ADMIN_FINANCIALS    = "admin_financials"
+
     fun rateTrip(id: String) = "rate_trip/$id"
 
     fun tripDetail(id: String) = "trip_detail/$id"
@@ -90,9 +97,13 @@ fun KntNavHost(
                     SampleData.currentUser = when (role) {
                         UserRole.DRIVER -> SampleData.driverUser
                         UserRole.ADMIN  -> SampleData.adminUser
-                        else            -> SampleData.currentUser  // COMMUTER — already Tayla
+                        else            -> SampleData.currentUser
                     }
-                    navController.navigate(Routes.HOME) {
+                    val dest = when (role) {
+                        UserRole.ADMIN -> Routes.ADMIN_DASHBOARD
+                        else           -> Routes.HOME
+                    }
+                    navController.navigate(dest) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
@@ -267,6 +278,47 @@ fun KntNavHost(
                 onBack  = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() },
             )
+        }
+
+        // ── Admin ─────────────────────────────────────────────────────────────
+
+        composable(Routes.ADMIN_DASHBOARD) {
+            AdminDashboardScreen(
+                onBack       = {
+                    navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
+                onUsers      = { navController.navigate(Routes.ADMIN_USERS) },
+                onTrips      = { navController.navigate(Routes.MY_TRIPS) },
+                onAnalytics  = { navController.navigate(Routes.ADMIN_ANALYTICS) },
+                onFinancials = { navController.navigate(Routes.ADMIN_FINANCIALS) },
+            )
+        }
+
+        composable(Routes.ADMIN_USERS) {
+            AdminUsersScreen(
+                onBack         = { navController.popBackStack() },
+                onCreateDriver = { navController.navigate(Routes.ADMIN_CREATE_DRIVER) },
+                onEditUser     = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.ADMIN_CREATE_DRIVER) {
+            AdminCreateDriverScreen(
+                onBack    = { navController.popBackStack() },
+                onCreated = {
+                    navController.navigate(Routes.ADMIN_USERS) {
+                        popUpTo(Routes.ADMIN_USERS) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable(Routes.ADMIN_ANALYTICS) {
+            AdminAnalyticsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.ADMIN_FINANCIALS) {
+            AdminFinancialsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

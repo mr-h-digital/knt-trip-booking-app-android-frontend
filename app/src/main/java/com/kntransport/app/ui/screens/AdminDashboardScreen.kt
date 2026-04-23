@@ -1,0 +1,202 @@
+package com.kntransport.app.ui.screens
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.*
+import com.kntransport.app.data.SampleData
+import com.kntransport.app.ui.components.*
+import com.kntransport.app.ui.theme.*
+
+@Composable
+fun AdminDashboardScreen(
+    onBack        : () -> Unit,
+    onUsers       : () -> Unit,
+    onTrips       : () -> Unit,
+    onAnalytics   : () -> Unit,
+    onFinancials  : () -> Unit,
+) {
+    val c    = LocalAppColors.current
+    val user = SampleData.currentUser
+
+    KntScaffold(title = "Admin Dashboard", onBack = onBack) { pv ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pv)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+        ) {
+            Spacer(Modifier.height(20.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Welcome back,",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = c.textMuted,
+                    )
+                    GradientText(
+                        text   = user.name,
+                        style  = MaterialTheme.typography.headlineSmall,
+                        colors = listOf(KntWhite, KntYellow),
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = KntOrange.copy(alpha = 0.15f),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Icon(Icons.Rounded.AdminPanelSettings, null, tint = KntOrange, modifier = Modifier.size(14.dp))
+                        Text("Administrator", style = MaterialTheme.typography.labelSmall, color = KntOrange)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader(title = "Overview")
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                AdminStatCard("24",      "Total Users",     Icons.Rounded.People,       c.blue,    Modifier.weight(1f))
+                AdminStatCard("3",       "Active Trips",    Icons.Rounded.DirectionsBus, c.yellow,  Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                AdminStatCard("5",        "Pending Quotes",  Icons.Rounded.RequestQuote, KntOrange,   Modifier.weight(1f))
+                AdminStatCard("R12,450",  "Total Revenue",   Icons.Rounded.Payments,     StatusGreen, Modifier.weight(1f), isMonetary = true)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader(title = "Manage")
+            Spacer(Modifier.height(12.dp))
+
+            AdminNavCard(
+                icon     = Icons.Rounded.People,
+                title    = "Users",
+                subtitle = "Manage commuters, drivers & admins",
+                tint     = c.blue,
+                onClick  = onUsers,
+            )
+            Spacer(Modifier.height(10.dp))
+            AdminNavCard(
+                icon     = Icons.Rounded.DirectionsBus,
+                title    = "All Trips",
+                subtitle = "View and manage all trip bookings",
+                tint     = c.yellow,
+                onClick  = onTrips,
+            )
+            Spacer(Modifier.height(10.dp))
+            AdminNavCard(
+                icon     = Icons.Rounded.BarChart,
+                title    = "Analytics",
+                subtitle = "Routes, ratings and trip trends",
+                tint     = KntOrange,
+                onClick  = onAnalytics,
+            )
+            Spacer(Modifier.height(10.dp))
+            AdminNavCard(
+                icon     = Icons.Rounded.AccountBalance,
+                title    = "Financials",
+                subtitle = "Revenue, transactions & export reports",
+                tint     = StatusGreen,
+                onClick  = onFinancials,
+            )
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun AdminStatCard(
+    value      : String,
+    label      : String,
+    icon       : ImageVector,
+    tint       : Color,
+    modifier   : Modifier = Modifier,
+    isMonetary : Boolean = false,
+) {
+    val c       = LocalAppColors.current
+    val numeric = value.filter { it.isDigit() }
+    val target  = numeric.toIntOrNull() ?: 0
+    val animated by animateIntAsState(
+        targetValue   = target,
+        animationSpec = tween(1000, easing = EaseOutCubic),
+        label         = "stat",
+    )
+    val display = if (!isMonetary && numeric.isNotEmpty()) animated.toString() else value
+
+    Surface(
+        shape    = RoundedCornerShape(14.dp),
+        color    = c.surface2,
+        border   = BorderStroke(1.dp, tint.copy(alpha = 0.25f)),
+        modifier = modifier,
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            GradientText(
+                text   = display,
+                style  = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                colors = listOf(tint, tint.copy(0.7f)),
+            )
+            Text(label, style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+        }
+    }
+}
+
+@Composable
+private fun AdminNavCard(
+    icon    : ImageVector,
+    title   : String,
+    subtitle: String,
+    tint    : Color,
+    onClick : () -> Unit,
+) {
+    val c = LocalAppColors.current
+    KntCard(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title,    style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,  color = c.textMuted)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = c.textDim, modifier = Modifier.size(20.dp))
+        }
+    }
+}
