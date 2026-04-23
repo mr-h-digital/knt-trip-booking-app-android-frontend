@@ -37,7 +37,6 @@ fun AdminDashboardScreen(
 
     KntScaffold(
         title     = "Admin Dashboard",
-        onBack    = onBack,
         bottomBar = {
             RoleBottomNav(
                 tabs     = adminTabs,
