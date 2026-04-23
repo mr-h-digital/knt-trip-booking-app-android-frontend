@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.AdminNavTab
@@ -58,39 +59,50 @@ fun AdminDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pv)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
-            Spacer(Modifier.height(20.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg, modifier = Modifier.fillMaxSize(), darkOverlay = 0.55f)
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.5f)))
+                    )
+                )
+                Column(
+                    Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 16.dp)
+                ) {
                     Text(
                         "Welcome back,",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.textMuted,
+                        style = MaterialTheme.typography.bodySmall.copy(color = KntMuted),
                     )
                     GradientText(
                         text   = user.name,
                         style  = MaterialTheme.typography.headlineSmall,
                         colors = listOf(KntWhite, KntYellow),
                     )
-                }
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = KntOrange.copy(alpha = 0.15f),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    Spacer(Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = KntOrange.copy(alpha = 0.20f),
                     ) {
-                        Icon(Icons.Rounded.AdminPanelSettings, null, tint = KntOrange, modifier = Modifier.size(14.dp))
-                        Text("Administrator", style = MaterialTheme.typography.labelSmall, color = KntOrange)
+                        Row(
+                            Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            Icon(Icons.Rounded.AdminPanelSettings, null, tint = KntOrange, modifier = Modifier.size(13.dp))
+                            Text("Administrator", style = MaterialTheme.typography.labelSmall, color = KntOrange)
+                        }
                     }
                 }
             }
 
+            Column(Modifier.padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(24.dp))
             SectionHeader(title = "Overview")
             Spacer(Modifier.height(12.dp))
@@ -148,6 +160,7 @@ fun AdminDashboardScreen(
             )
 
             Spacer(Modifier.height(32.dp))
+            } // close inner padding Column
         }
     }
 }
