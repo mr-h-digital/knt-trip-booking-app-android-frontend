@@ -123,6 +123,14 @@ object SampleData {
         role  = UserRole.DRIVER,
     )
 
+    val adminUser = User(
+        id    = "a1",
+        name  = "Admin User",
+        email = "admin@ktransport.co.za",
+        phone = "+27211234567",
+        role  = UserRole.ADMIN,
+    )
+
     val myTrips = listOf(
         TripBooking(
             id = "t1", commuterId = "u1", commuterName = "Tayla Hendricks",

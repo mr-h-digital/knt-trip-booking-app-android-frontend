@@ -9,6 +9,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.kntransport.app.data.AppNotification
+import com.kntransport.app.data.SampleData
+import com.kntransport.app.data.UserRole
 import com.kntransport.app.ui.screens.*
 
 object Routes {
@@ -82,8 +84,18 @@ fun KntNavHost(
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onSignUp        = { navController.navigate(Routes.SIGN_UP) },
+                onSignUp         = { navController.navigate(Routes.SIGN_UP) },
                 onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
+                onDemoLogin      = { role ->
+                    SampleData.currentUser = when (role) {
+                        UserRole.DRIVER -> SampleData.driverUser
+                        UserRole.ADMIN  -> SampleData.adminUser
+                        else            -> SampleData.currentUser  // COMMUTER — already Tayla
+                    }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
             )
         }
 
