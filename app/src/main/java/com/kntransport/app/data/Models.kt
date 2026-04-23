@@ -92,12 +92,14 @@ data class Quote(
 enum class NotifType { QUOTE_RECEIVED, TRIP_CONFIRMED, LIFT_CLUB_UPDATE, GENERAL }
 
 data class AppNotification(
-    val id        : String,
-    val type      : NotifType,
-    val title     : String,
-    val body      : String,
-    val timestamp : String,
-    val read      : Boolean = false,
+    val id            : String,
+    val type          : NotifType,
+    val title         : String,
+    val body          : String,
+    val timestamp     : String,
+    val read          : Boolean = false,
+    val referenceId   : String? = null,
+    val referenceType : String? = null,  // "TRIP", "LIFT_CLUB", "QUOTE"
 )
 
 // ── Sample data ───────────────────────────────────────────────────────────────

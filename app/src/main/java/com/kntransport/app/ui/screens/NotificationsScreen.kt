@@ -20,7 +20,10 @@ import com.kntransport.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit) {
+fun NotificationsScreen(
+    onBack               : () -> Unit,
+    onNotificationClick  : (AppNotification) -> Unit = {},
+) {
     val c      = LocalAppColors.current
     val notifs = remember { SampleData.notifications.toMutableStateList() }
 
@@ -78,9 +81,13 @@ fun NotificationsScreen(onBack: () -> Unit) {
                         enter   = slideInVertically(tween(320, easing = EaseOutCubic)) { it / 3 } + fadeIn(tween(320)),
                     ) {
                         SwipeableNotifCard(
-                            notif    = notif,
-                            onRead   = { notifs[idx] = notif.copy(read = true) },
+                            notif     = notif,
+                            onRead    = { notifs[idx] = notif.copy(read = true) },
                             onDismiss = { notifs.removeAt(idx) },
+                            onClick   = {
+                                notifs[idx] = notif.copy(read = true)
+                                onNotificationClick(notifs[idx])
+                            },
                         )
                     }
                 }
@@ -96,6 +103,7 @@ private fun SwipeableNotifCard(
     notif    : AppNotification,
     onRead   : () -> Unit,
     onDismiss: () -> Unit,
+    onClick  : () -> Unit = {},
 ) {
     val c             = LocalAppColors.current
     val (icon, tint)  = notifStyle(notif.type)
@@ -135,6 +143,7 @@ private fun SwipeableNotifCard(
         enableDismissFromEndToStart = true,
     ) {
         Surface(
+            onClick  = onClick,
             shape    = RoundedCornerShape(14.dp),
             color    = if (notif.read) c.surface1.copy(0.9f) else c.surface2,
             border   = if (!notif.read) BorderStroke(1.dp, tint.copy(alpha = 0.3f)) else

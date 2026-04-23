@@ -112,12 +112,14 @@ data class QuoteAcceptRequest(
 // ── Notification ──────────────────────────────────────────────────────────────
 
 data class NotificationDto(
-    @SerializedName("id")        val id        : String,
-    @SerializedName("type")      val type      : String,
-    @SerializedName("title")     val title     : String,
-    @SerializedName("body")      val body      : String,
-    @SerializedName("timestamp") val timestamp : String,
-    @SerializedName("read")      val read      : Boolean = false,
+    @SerializedName("id")            val id            : String,
+    @SerializedName("type")          val type          : String,
+    @SerializedName("title")         val title         : String,
+    @SerializedName("body")          val body          : String,
+    @SerializedName("timestamp")     val timestamp     : String,
+    @SerializedName("read")          val read          : Boolean = false,
+    @SerializedName("referenceId")   val referenceId   : String? = null,
+    @SerializedName("referenceType") val referenceType : String? = null,
 )
 
 // ── Generic wrapper ───────────────────────────────────────────────────────────

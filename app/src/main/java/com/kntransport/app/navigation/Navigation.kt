@@ -2,12 +2,13 @@ package com.kntransport.app.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.kntransport.app.data.AppNotification
 import com.kntransport.app.ui.screens.*
 
 object Routes {
@@ -24,7 +25,8 @@ object Routes {
     const val LIFT_CLUB_DETAIL= "lift_club_detail/{clubId}"
     const val CREATE_LIFT_CLUB= "create_lift_club"
     const val QUOTE_REVIEW    = "quote_review/{quoteId}/{type}"
-    const val NOTIFICATIONS   = "notifications"
+    const val NOTIFICATIONS        = "notifications"
+    const val NOTIFICATION_DETAIL = "notification_detail"
     const val PROFILE         = "profile"
     const val APPEARANCE      = "appearance"
     const val EDIT_PROFILE    = "edit_profile"
@@ -43,6 +45,9 @@ fun KntNavHost(
     showOnboarding   : Boolean = false,
     onOnboardingDone : () -> Unit = {},
 ) {
+    // Holds the selected notification so NotificationDetailScreen can read it
+    // without serialising the whole object into the route.
+    var selectedNotification by remember { mutableStateOf<AppNotification?>(null) }
     val start = if (showOnboarding) Routes.ONBOARDING else Routes.SPLASH
     NavHost(
         navController    = navController,
@@ -191,7 +196,40 @@ fun KntNavHost(
         }
 
         composable(Routes.NOTIFICATIONS) {
-            NotificationsScreen(onBack = { navController.popBackStack() })
+            NotificationsScreen(
+                onBack              = { navController.popBackStack() },
+                onNotificationClick = { notif ->
+                    selectedNotification = notif
+                    navController.navigate(Routes.NOTIFICATION_DETAIL)
+                },
+            )
+        }
+
+        composable(Routes.NOTIFICATION_DETAIL) {
+            val notif = selectedNotification
+            if (notif == null) {
+                navController.popBackStack()
+                return@composable
+            }
+            NotificationDetailScreen(
+                notification   = notif,
+                onBack         = { navController.popBackStack() },
+                onViewTrip     = { id ->
+                    navController.navigate(Routes.tripDetail(id)) {
+                        popUpTo(Routes.NOTIFICATIONS)
+                    }
+                },
+                onViewLiftClub = { id ->
+                    navController.navigate(Routes.liftClubDetail(id)) {
+                        popUpTo(Routes.NOTIFICATIONS)
+                    }
+                },
+                onReviewQuote  = { id ->
+                    navController.navigate(Routes.quoteReview(id, notif.referenceType ?: "TRIP")) {
+                        popUpTo(Routes.NOTIFICATIONS)
+                    }
+                },
+            )
         }
 
         composable(Routes.PROFILE) {
