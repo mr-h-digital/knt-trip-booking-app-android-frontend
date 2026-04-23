@@ -28,6 +28,7 @@ fun AdminDashboardScreen(
     onTrips       : () -> Unit,
     onAnalytics   : () -> Unit,
     onFinancials  : () -> Unit,
+    onProfile     : () -> Unit = {},
 ) {
     val c           = LocalAppColors.current
     val user        = SampleData.currentUser
@@ -47,6 +48,7 @@ fun AdminDashboardScreen(
                         1 -> onUsers()
                         2 -> onAnalytics()
                         3 -> onFinancials()
+                        4 -> onProfile()
                         else -> {}
                     }
                 },

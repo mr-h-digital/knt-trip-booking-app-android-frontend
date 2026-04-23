@@ -121,12 +121,33 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "My Activity")
                 KntCard {
-                    ActivityRow(Icons.Rounded.DirectionsBus, "Total Trips",        "${SampleData.myTrips.size}", c.blue)
-                    KntDivider()
-                    ActivityRow(Icons.Rounded.Groups, "Lift Club Subscriptions",   "${SampleData.myLiftClubSubscriptions.size}", c.yellow)
-                    KntDivider()
-                    ActivityRow(Icons.Rounded.CheckCircle, "Completed Trips",
-                        "${SampleData.myTrips.count { it.status == com.kntransport.app.data.TripStatus.COMPLETED }}", StatusGreen)
+                    when (user.role) {
+                        com.kntransport.app.data.UserRole.DRIVER -> {
+                            ActivityRow(Icons.Rounded.DirectionsBus, "Trips Driven",
+                                "${SampleData.driverTrips.size}", c.blue)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.CheckCircle, "Completed Trips",
+                                "${SampleData.driverTrips.count { it.status == com.kntransport.app.data.TripStatus.COMPLETED }}", StatusGreen)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.Payments, "Total Earned",
+                                "R${SampleData.driverTrips.filter { it.status == com.kntransport.app.data.TripStatus.COMPLETED }.mapNotNull { it.quotedAmount }.sum().let { "%.0f".format(it) }}", c.yellow)
+                        }
+                        com.kntransport.app.data.UserRole.ADMIN -> {
+                            ActivityRow(Icons.Rounded.People, "Users Managed",     "7",  c.blue)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.DirectionsBus, "Total Trips", "24", c.yellow)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.AdminPanelSettings, "Role",   "Administrator", KntOrange)
+                        }
+                        else -> {
+                            ActivityRow(Icons.Rounded.DirectionsBus, "Total Trips",        "${SampleData.myTrips.size}", c.blue)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.Groups, "Lift Club Subscriptions",   "${SampleData.myLiftClubSubscriptions.size}", c.yellow)
+                            KntDivider()
+                            ActivityRow(Icons.Rounded.CheckCircle, "Completed Trips",
+                                "${SampleData.myTrips.count { it.status == com.kntransport.app.data.TripStatus.COMPLETED }}", StatusGreen)
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))

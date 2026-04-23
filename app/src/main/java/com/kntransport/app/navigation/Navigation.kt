@@ -337,6 +337,7 @@ fun KntNavHost(
                 onTrips      = { navController.navigate(Routes.MY_TRIPS) },
                 onAnalytics  = { navController.navigate(Routes.ADMIN_ANALYTICS) },
                 onFinancials = { navController.navigate(Routes.ADMIN_FINANCIALS) },
+                onProfile    = { navController.navigate(Routes.PROFILE) },
             )
         }
 

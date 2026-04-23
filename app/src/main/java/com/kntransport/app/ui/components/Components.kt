@@ -271,6 +271,7 @@ enum class AdminNavTab(val label: String, val icon: ImageVector) {
     USERS       ("Users",       Icons.Rounded.People),
     ANALYTICS   ("Analytics",   Icons.Rounded.BarChart),
     FINANCIALS  ("Financials",  Icons.Rounded.AccountBalance),
+    PROFILE     ("Profile",     Icons.Rounded.Person),
 }
 
 // ── Generic role bottom nav (Driver / Admin) ──────────────────────────────────
