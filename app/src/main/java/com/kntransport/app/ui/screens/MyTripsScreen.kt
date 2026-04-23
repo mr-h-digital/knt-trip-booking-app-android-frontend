@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter
 fun MyTripsScreen(
     onBack      : () -> Unit,
     onTripDetail: (String) -> Unit,
+    onBookTrip  : () -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val tabs = listOf("All", "Active", "Completed")
@@ -34,7 +35,15 @@ fun MyTripsScreen(
         else -> SampleData.myTrips
     }
 
-    KntScaffold(title = "My Trips", onBack = onBack) { pv ->
+    KntScaffold(
+        title   = "My Trips",
+        onBack  = onBack,
+        actions = {
+            IconButton(onClick = onBookTrip) {
+                Icon(Icons.Rounded.Add, contentDescription = "Book a Trip", tint = KntWhite)
+            }
+        },
+    ) { pv ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pv)
         ) {
@@ -76,7 +85,7 @@ fun MyTripsScreen(
             }
 
             if (filtered.isEmpty()) {
-                TripEmptyState(onBook = {})
+                TripEmptyState(onBook = onBookTrip)
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),

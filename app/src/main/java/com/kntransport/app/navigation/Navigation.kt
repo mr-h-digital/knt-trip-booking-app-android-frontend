@@ -124,6 +124,7 @@ fun KntNavHost(
             MyTripsScreen(
                 onBack       = { navController.popBackStack() },
                 onTripDetail = { id -> navController.navigate(Routes.tripDetail(id)) },
+                onBookTrip   = { navController.navigate(Routes.BOOK_TRIP) },
             )
         }
 
