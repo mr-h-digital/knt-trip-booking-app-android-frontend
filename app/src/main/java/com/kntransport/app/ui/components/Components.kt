@@ -103,13 +103,16 @@ fun KntScaffold(
 
 @Composable
 fun KntLogoBadge(modifier: Modifier = Modifier, size: Dp = 56.dp) {
-    val c = LocalAppColors.current
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape((size.value * 0.2f).dp))
-            .background(c.logoBg)
-            .padding(if (c.logoBg == Color.Transparent) 0.dp else (size.value * 0.08f).dp),
+            .clip(RoundedCornerShape((size.value * 0.22f).dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .border(
+                BorderStroke(1.dp, KntYellow.copy(alpha = 0.55f)),
+                RoundedCornerShape((size.value * 0.22f).dp),
+            )
+            .padding((size.value * 0.08f).dp),
         contentAlignment = Alignment.Center,
     ) {
         Image(
