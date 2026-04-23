@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.kntransport.app.R
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.util.FinancialReportData
