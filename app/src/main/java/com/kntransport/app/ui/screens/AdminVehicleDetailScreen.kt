@@ -22,6 +22,7 @@ import com.kntransport.app.ui.theme.*
 fun AdminVehicleDetailScreen(
     vehicle        : Vehicle,
     onBack         : () -> Unit,
+    onEdit         : () -> Unit = {},
     onAssignDriver : () -> Unit = {},
 ) {
     val c = LocalAppColors.current
@@ -67,7 +68,7 @@ fun AdminVehicleDetailScreen(
         title   = "Vehicle Detail",
         onBack  = onBack,
         actions = {
-            IconButton(onClick = {}) {
+            IconButton(onClick = onEdit) {
                 Icon(Icons.Rounded.Edit, "Edit vehicle", tint = KntWhite)
             }
         },

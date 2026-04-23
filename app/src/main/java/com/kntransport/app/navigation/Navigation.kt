@@ -54,6 +54,7 @@ object Routes {
     const val ADMIN_FLEET          = "admin_fleet"
     const val ADMIN_VEHICLE_DETAIL = "admin_vehicle_detail"
     const val ADMIN_ADD_VEHICLE    = "admin_add_vehicle"
+    const val ADMIN_EDIT_VEHICLE   = "admin_edit_vehicle"
 
     fun rateTrip(id: String) = "rate_trip/$id"
 
@@ -413,7 +414,21 @@ fun KntNavHost(
             AdminVehicleDetailScreen(
                 vehicle        = vehicle,
                 onBack         = { navController.popBackStack() },
+                onEdit         = { navController.navigate(Routes.ADMIN_EDIT_VEHICLE) },
                 onAssignDriver = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.ADMIN_EDIT_VEHICLE) {
+            val vehicle = selectedVehicle
+            if (vehicle == null) {
+                navController.popBackStack()
+                return@composable
+            }
+            AdminEditVehicleScreen(
+                vehicle = vehicle,
+                onBack  = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
             )
         }
 
