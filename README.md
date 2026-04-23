@@ -247,7 +247,7 @@ app/src/main/java/com/kntransport/app/
 ### Clone & Open
 
 ```bash
-git clone https://github.com/your-org/knt-trip-booking-app-android-frontend.git
+git clone https://github.com/mr-h-digital/knt-trip-booking-app-android-frontend.git
 ```
 
 Open Android Studio → **File → Open** → select the cloned folder. Wait for Gradle sync to complete.
@@ -381,7 +381,7 @@ when (val s = state) {
 <br/>
 
 [![Website](https://img.shields.io/badge/Website-mrhdigital.co.za-84CC16?style=flat-square)](https://mrhdigital.co.za)
-[![Email](https://img.shields.io/badge/Email-hello%40mrhdigital.co.za-84CC16?style=flat-square)](mailto:hello@mrhdigital.co.za)
+[![Email](https://img.shields.io/badge/Email-info%40mrhdigital.co.za-84CC16?style=flat-square)](mailto:info@mrhdigital.co.za)
 
 <br/>
 
