@@ -12,11 +12,61 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.util.FinancialReportData
+import com.kntransport.app.util.ReportExporter
+import com.kntransport.app.util.RouteEntry
+import com.kntransport.app.util.TransactionEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@Composable
+private fun ExportOptionRow(
+    icon    : ImageVector,
+    tint    : Color,
+    title   : String,
+    subtitle: String,
+    loading : Boolean,
+    onClick : () -> Unit,
+) {
+    val c = LocalAppColors.current
+    Surface(
+        onClick  = { if (!loading) onClick() },
+        shape    = RoundedCornerShape(14.dp),
+        color    = c.surface1,
+        border   = BorderStroke(1.dp, tint.copy(alpha = 0.25f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (loading) {
+                    CircularProgressIndicator(color = tint, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title,    style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,  color = c.textMuted)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = c.textDim, modifier = Modifier.size(18.dp))
+        }
+    }
+}
 
 private data class FinancialPeriod(
     val totalRevenue  : String,
@@ -93,18 +143,106 @@ private val yearFinancials = FinancialPeriod(
     ),
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminFinancialsScreen(onBack: () -> Unit) {
-    val c             = LocalAppColors.current
-    val periods       = listOf("This Week", "This Month", "This Year")
-    var selected      by remember { mutableIntStateOf(1) }
-    val snackbarState = remember { SnackbarHostState() }
-    val scope         = rememberCoroutineScope()
+    val c               = LocalAppColors.current
+    val context         = LocalContext.current
+    val periods         = listOf("This Week", "This Month", "This Year")
+    var selected        by remember { mutableIntStateOf(1) }
+    val snackbarState   = remember { SnackbarHostState() }
+    val scope           = rememberCoroutineScope()
+    var showExportSheet by remember { mutableStateOf(false) }
+    var exporting       by remember { mutableStateOf(false) }
 
     val fin = when (selected) {
         0    -> weekFinancials
         2    -> yearFinancials
         else -> monthFinancials
+    }
+
+    fun buildReportData() = FinancialReportData(
+        period       = periods[selected],
+        totalRevenue = fin.totalRevenue,
+        collected    = fin.collected,
+        outstanding  = fin.outstanding,
+        routes       = fin.routes.map { RouteEntry(it.route, "R${String.format("%.0f", it.amount)}") },
+        transactions = fin.transactions.map { TransactionEntry(it.commuter, it.route, it.amount, it.date, it.paid) },
+    )
+
+    if (showExportSheet) {
+        ModalBottomSheet(
+            onDismissRequest  = { showExportSheet = false },
+            containerColor    = c.surface2,
+            dragHandle        = {
+                Box(
+                    Modifier.padding(vertical = 12.dp)
+                        .width(40.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(c.borderColor)
+                )
+            },
+        ) {
+            Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+                Text("Export Report", style = MaterialTheme.typography.titleMedium, color = c.textBright)
+                Text(
+                    "Choose a format to export the ${periods[selected]} financial report.",
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = c.textMuted,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
+                )
+
+                ExportOptionRow(
+                    icon     = Icons.Rounded.PictureAsPdf,
+                    tint     = StatusRed,
+                    title    = "Export as PDF",
+                    subtitle = "Formatted report ready to print or share",
+                    loading  = exporting,
+                    onClick  = {
+                        scope.launch {
+                            exporting = true
+                            withContext(Dispatchers.IO) { ReportExporter.sharePdf(context, buildReportData()) }
+                            exporting        = false
+                            showExportSheet  = false
+                        }
+                    },
+                )
+                Spacer(Modifier.height(10.dp))
+
+                ExportOptionRow(
+                    icon     = Icons.Rounded.TableChart,
+                    tint     = StatusGreen,
+                    title    = "Export as CSV",
+                    subtitle = "Spreadsheet-compatible data file",
+                    loading  = exporting,
+                    onClick  = {
+                        scope.launch {
+                            exporting = true
+                            withContext(Dispatchers.IO) { ReportExporter.shareCsv(context, buildReportData()) }
+                            exporting        = false
+                            showExportSheet  = false
+                        }
+                    },
+                )
+                Spacer(Modifier.height(10.dp))
+
+                ExportOptionRow(
+                    icon     = Icons.Rounded.Email,
+                    tint     = c.blue,
+                    title    = "Send via Email",
+                    subtitle = "Attach CSV and send to accountant",
+                    loading  = exporting,
+                    onClick  = {
+                        scope.launch {
+                            exporting = true
+                            withContext(Dispatchers.IO) { ReportExporter.shareViaEmail(context, buildReportData()) }
+                            exporting        = false
+                            showExportSheet  = false
+                        }
+                    },
+                )
+            }
+        }
     }
 
     KntScaffold(title = "Financials", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
@@ -245,9 +383,7 @@ fun AdminFinancialsScreen(onBack: () -> Unit) {
 
             KntPrimaryButton(
                 text    = "Export Report",
-                onClick = {
-                    scope.launch { snackbarState.showSnackbar("Report ready to share") }
-                },
+                onClick = { showExportSheet = true },
                 icon    = Icons.Rounded.Share,
             )
 
