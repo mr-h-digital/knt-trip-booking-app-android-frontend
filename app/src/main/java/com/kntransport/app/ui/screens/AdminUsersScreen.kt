@@ -11,10 +11,12 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
 import com.kntransport.app.data.User
 import com.kntransport.app.data.UserRole
@@ -57,6 +59,21 @@ fun AdminUsersScreen(
         },
     ) { pv ->
         Column(Modifier.fillMaxSize().padding(pv)) {
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg_8, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
+                    Text(
+                        "Manage your team",
+                        style = MaterialTheme.typography.labelMedium.copy(color = KntYellow, letterSpacing = 0.5.sp),
+                    )
+                }
+            }
 
             ScrollableTabRow(
                 selectedTabIndex = selectedTab,

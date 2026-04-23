@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.draw.clip
+import com.kntransport.app.R
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 
@@ -47,9 +49,24 @@ fun AdminCreateDriverScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pv)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg_4, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
+                    Text(
+                        "Add a new driver to your team",
+                        style = MaterialTheme.typography.labelMedium.copy(color = KntYellow, letterSpacing = 0.5.sp),
+                    )
+                }
+            }
+
+            Column(Modifier.padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(20.dp))
 
             Surface(
@@ -187,6 +204,7 @@ fun AdminCreateDriverScreen(
             Spacer(Modifier.height(8.dp))
             KntSecondaryButton(text = "Cancel", onClick = onBack)
             Spacer(Modifier.height(32.dp))
+            } // close inner padding Column
         }
     }
 }

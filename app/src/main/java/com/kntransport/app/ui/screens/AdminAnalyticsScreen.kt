@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import com.kntransport.app.R
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -65,9 +66,24 @@ fun AdminAnalyticsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pv)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            ) {
+                HeroBgImage(resId = R.drawable.hero_bg_6, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
+                    Text(
+                        "Business insights",
+                        style = MaterialTheme.typography.labelMedium.copy(color = KntYellow, letterSpacing = 0.5.sp),
+                    )
+                }
+            }
+
+            Column(Modifier.padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -190,6 +206,7 @@ fun AdminAnalyticsScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(32.dp))
+            } // close inner padding Column
         }
     }
 }

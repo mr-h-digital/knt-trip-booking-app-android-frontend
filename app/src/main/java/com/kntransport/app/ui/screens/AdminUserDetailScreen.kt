@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.kntransport.app.R
 import com.kntransport.app.data.User
 import com.kntransport.app.data.UserRole
 import com.kntransport.app.ui.components.*
@@ -94,10 +95,16 @@ fun AdminUserDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(c.headerEnd, c.bgDeep)))
-                    .padding(32.dp),
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
                 contentAlignment = Alignment.Center,
             ) {
+                HeroBgImage(resId = R.drawable.hero_bg_2, modifier = Modifier.fillMaxSize(), darkOverlay = 0.62f)
+                Box(Modifier.fillMaxSize().background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(androidx.compose.ui.graphics.Color.Transparent, c.bgDeep.copy(0.7f))
+                    )
+                ))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
