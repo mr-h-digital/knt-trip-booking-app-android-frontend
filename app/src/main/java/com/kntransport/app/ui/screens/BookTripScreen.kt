@@ -11,16 +11,21 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.TripViewModel
 
 @Composable
 fun BookTripScreen(
     onBack     : () -> Unit,
     onSubmitted: () -> Unit,
+    viewModel  : TripViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c           = LocalAppColors.current
+    val createState by viewModel.createState.collectAsState()
 
     var pickup     by remember { mutableStateOf("") }
     var dropoff    by remember { mutableStateOf("") }
@@ -28,16 +33,32 @@ fun BookTripScreen(
     var time       by remember { mutableStateOf("") }
     var passengers by remember { mutableIntStateOf(1) }
     var notes      by remember { mutableStateOf("") }
-    var submitted  by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val isValid = pickup.isNotBlank() && dropoff.isNotBlank() && date.isNotBlank() && time.isNotBlank()
+    val isLoading = createState is ApiResult.Loading
+    val isValid   = pickup.isNotBlank() && dropoff.isNotBlank() && date.isNotBlank() && time.isNotBlank()
 
-    if (submitted) {
-        TripSubmittedSuccess(onDone = onSubmitted)
+    LaunchedEffect(createState) {
+        when (val s = createState) {
+            is ApiResult.Success -> { viewModel.resetCreateState(); onSubmitted() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetCreateState() }
+            else -> {}
+        }
+    }
+
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
         return
     }
 
-    KntScaffold(title = "Book a Trip", onBack = onBack) { pv ->
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarHostState.showSnackbar(it); errorMessage = null }
+    }
+
+    KntScaffold(title = "Book a Trip", onBack = onBack, snackbarHost = { SnackbarHost(snackbarHostState) }) { pv ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -158,7 +179,7 @@ fun BookTripScreen(
 
             KntPrimaryButton(
                 text    = "Submit Trip Request",
-                onClick = { submitted = true },
+                onClick = { viewModel.createTrip(pickup, dropoff, date, time, passengers, notes) },
                 enabled = isValid,
                 icon    = Icons.Rounded.Send,
             )
@@ -176,30 +197,3 @@ fun BookTripScreen(
     }
 }
 
-@Composable
-private fun TripSubmittedSuccess(onDone: () -> Unit) {
-    val c = LocalAppColors.current
-    Box(
-        modifier = Modifier.fillMaxSize().background(c.bgDeep),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(32.dp),
-        ) {
-            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = c.blue.copy(alpha = 0.15f)) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = c.blue,
-                    modifier = Modifier.size(80.dp).padding(18.dp))
-            }
-            Text("Trip Request Submitted!", style = MaterialTheme.typography.headlineMedium, color = c.textBright)
-            Text(
-                "K&T Transport will review your request and send you a quote shortly. You'll be notified once it's ready.",
-                style = MaterialTheme.typography.bodyMedium, color = c.textMuted,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            Spacer(Modifier.height(8.dp))
-            KntPrimaryButton(text = "View My Trips", onClick = onDone, icon = Icons.Rounded.DirectionsBus)
-        }
-    }
-}

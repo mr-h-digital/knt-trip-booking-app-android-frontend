@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.*
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
+import com.kntransport.app.ui.components.formatRelativeTime
 import com.kntransport.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,7 +161,7 @@ private fun SwipeableNotifCard(
                     Spacer(Modifier.height(2.dp))
                     Text(notif.body, style = MaterialTheme.typography.bodySmall, color = c.textMuted, maxLines = 2)
                     Spacer(Modifier.height(4.dp))
-                    Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = c.textDim)
+                    Text(formatRelativeTime(notif.timestamp), style = MaterialTheme.typography.labelSmall, color = c.textDim)
                 }
                 if (!notif.read) {
                     Spacer(Modifier.width(8.dp))

@@ -75,11 +75,22 @@ data class LiftClubDto(
     @SerializedName("departureTime")    val departureTime    : String,
     @SerializedName("daysOfWeek")       val daysOfWeek       : List<String>,
     @SerializedName("maxPassengers")    val maxPassengers    : Int,
-    @SerializedName("subscriberCount")  val subscriberCount  : Int = 0,
+    @SerializedName("subscriberCount")  val subscriberCount  : Long = 0L,
     @SerializedName("status")           val status           : String,
     @SerializedName("quotedAmount")     val quotedAmount     : Double? = null,
     @SerializedName("paymentCycle")     val paymentCycle     : String? = null,
     @SerializedName("description")      val description      : String = "",
+)
+
+data class CreateLiftClubRequest(
+    @SerializedName("title")         val title         : String,
+    @SerializedName("pickupArea")    val pickupArea    : String,
+    @SerializedName("dropArea")      val dropArea      : String,
+    @SerializedName("departureTime") val departureTime : String,
+    @SerializedName("returnTime")    val returnTime    : String? = null,
+    @SerializedName("daysOfWeek")    val daysOfWeek    : List<String>,
+    @SerializedName("maxPassengers") val maxPassengers : Int,
+    @SerializedName("description")   val description   : String = "",
 )
 
 // ── Quote ─────────────────────────────────────────────────────────────────────

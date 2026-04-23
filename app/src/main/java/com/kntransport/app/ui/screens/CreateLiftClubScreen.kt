@@ -10,8 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.LiftClubViewModel
 
 private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -19,27 +22,46 @@ private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 fun CreateLiftClubScreen(
     onBack     : () -> Unit,
     onSubmitted: () -> Unit,
+    viewModel  : LiftClubViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c           = LocalAppColors.current
+    val createState by viewModel.createState.collectAsState()
 
-    var title        by remember { mutableStateOf("") }
-    var pickupArea   by remember { mutableStateOf("") }
-    var dropArea     by remember { mutableStateOf("") }
+    var title         by remember { mutableStateOf("") }
+    var pickupArea    by remember { mutableStateOf("") }
+    var dropArea      by remember { mutableStateOf("") }
     var departureTime by remember { mutableStateOf("") }
-    var returnTime   by remember { mutableStateOf("") }
+    var returnTime    by remember { mutableStateOf("") }
     var maxPassengers by remember { mutableIntStateOf(4) }
-    var description  by remember { mutableStateOf("") }
-    var selectedDays by remember { mutableStateOf(setOf("Mon", "Tue", "Wed", "Thu", "Fri")) }
-    var submitted    by remember { mutableStateOf(false) }
+    var description   by remember { mutableStateOf("") }
+    var selectedDays  by remember { mutableStateOf(setOf("Mon", "Tue", "Wed", "Thu", "Fri")) }
+    var errorMessage  by remember { mutableStateOf<String?>(null) }
 
-    val isValid = title.isNotBlank() && pickupArea.isNotBlank() && dropArea.isNotBlank() && departureTime.isNotBlank()
+    val isLoading = createState is ApiResult.Loading
+    val isValid   = title.isNotBlank() && pickupArea.isNotBlank() && dropArea.isNotBlank() &&
+                    departureTime.isNotBlank() && selectedDays.isNotEmpty()
 
-    if (submitted) {
-        LiftClubSubmittedSuccess(onDone = onSubmitted)
+    LaunchedEffect(createState) {
+        when (val s = createState) {
+            is ApiResult.Success -> { viewModel.resetCreateState(); onSubmitted() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetCreateState() }
+            else -> {}
+        }
+    }
+
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
         return
     }
 
-    KntScaffold(title = "Create Lift Club", onBack = onBack) { pv ->
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarHostState.showSnackbar(it); errorMessage = null }
+    }
+
+    KntScaffold(title = "Create Lift Club", onBack = onBack, snackbarHost = { SnackbarHost(snackbarHostState) }) { pv ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -157,7 +179,13 @@ fun CreateLiftClubScreen(
 
             KntPrimaryButton(
                 text    = "Post Lift Club Request",
-                onClick = { submitted = true },
+                onClick = {
+                    viewModel.createLiftClub(
+                        title, pickupArea, dropArea, departureTime,
+                        returnTime.takeIf { it.isNotBlank() },
+                        selectedDays.toList(), maxPassengers, description,
+                    )
+                },
                 enabled = isValid,
                 icon    = Icons.Rounded.Send,
             )
@@ -168,27 +196,3 @@ fun CreateLiftClubScreen(
     }
 }
 
-@Composable
-private fun LiftClubSubmittedSuccess(onDone: () -> Unit) {
-    val c = LocalAppColors.current
-    Box(Modifier.fillMaxSize().background(c.bgDeep), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(32.dp),
-        ) {
-            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = c.yellow.copy(alpha = 0.15f)) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = c.yellow,
-                    modifier = Modifier.size(80.dp).padding(18.dp))
-            }
-            Text("Lift Club Posted!", style = MaterialTheme.typography.headlineMedium, color = c.textBright)
-            Text(
-                "Your lift club request is now live. K&T Transport will confirm and send a quote once the passenger quota is met.",
-                style = MaterialTheme.typography.bodyMedium, color = c.textMuted,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            Spacer(Modifier.height(8.dp))
-            KntPrimaryButton(text = "Browse Lift Clubs", onClick = onDone, icon = Icons.Rounded.Groups)
-        }
-    }
-}

@@ -40,14 +40,16 @@ import com.kntransport.app.ui.theme.*
 
 @Composable
 fun KntScaffold(
-    title   : String,
-    onBack  : (() -> Unit)? = null,
-    actions : @Composable RowScope.() -> Unit = {},
-    content : @Composable (PaddingValues) -> Unit,
+    title        : String,
+    onBack       : (() -> Unit)? = null,
+    actions      : @Composable RowScope.() -> Unit = {},
+    snackbarHost : @Composable () -> Unit = {},
+    content      : @Composable (PaddingValues) -> Unit,
 ) {
     val c = LocalAppColors.current
     Scaffold(
         containerColor = Color.Transparent,
+        snackbarHost   = snackbarHost,
         modifier = Modifier.background(
             Brush.linearGradient(
                 listOf(c.bgGradientTop, c.bgGradientMid, c.bgGradientBottom),
@@ -833,4 +835,24 @@ fun isValidEmail(email: String): Boolean =
 fun isValidSAPhone(phone: String): Boolean {
     val cleaned = phone.replace(" ", "").replace("-", "")
     return cleaned.matches(Regex("^(\\+27|0)[6-8][0-9]{8}\$"))
+}
+
+fun formatRelativeTime(isoTimestamp: String): String {
+    return try {
+        val instant  = java.time.Instant.parse(isoTimestamp)
+        val diffSecs = java.time.Instant.now().epochSecond - instant.epochSecond
+        when {
+            diffSecs < 60      -> "Just now"
+            diffSecs < 3600    -> "${diffSecs / 60} min ago"
+            diffSecs < 86400   -> "${diffSecs / 3600} hr ago"
+            diffSecs < 172800  -> "Yesterday"
+            diffSecs < 604800  -> "${diffSecs / 86400} days ago"
+            else               -> java.time.format.DateTimeFormatter
+                .ofPattern("d MMM")
+                .withZone(java.time.ZoneId.systemDefault())
+                .format(instant)
+        }
+    } catch (_: Exception) {
+        isoTimestamp
+    }
 }
