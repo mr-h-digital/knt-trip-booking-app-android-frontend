@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.Vehicle
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.AdminNavTab
 import com.kntransport.app.ui.components.NavTabItem
@@ -139,7 +138,7 @@ fun AdminDashboardScreen(
                 AdminStatCard(
                     value    = SampleData.vehicles.count { it.assignedDriverId != null }.toString(),
                     label    = "Assigned",
-                    icon     = Icons.Rounded.PersonCheck,
+                    icon     = Icons.Rounded.Person,
                     tint     = c.yellow,
                     modifier = Modifier.weight(1f),
                 )
