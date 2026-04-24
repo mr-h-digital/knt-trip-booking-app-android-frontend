@@ -249,11 +249,23 @@ fun ProfileScreen(
                         ),
                     )
                     Spacer(Modifier.height(10.dp))
-                    androidx.compose.foundation.Image(
-                        painter            = androidx.compose.ui.res.painterResource(com.kntransport.app.R.drawable.mrh_digital_logo),
-                        contentDescription = "Mr H Digital",
-                        modifier           = Modifier.width(130.dp),
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.Black.copy(alpha = 0.45f))
+                            .border(
+                                BorderStroke(1.dp, KntYellow.copy(alpha = 0.35f)),
+                                RoundedCornerShape(14.dp),
+                            )
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter            = androidx.compose.ui.res.painterResource(com.kntransport.app.R.drawable.mrh_digital_logo),
+                            contentDescription = "Mr H Digital",
+                            modifier           = Modifier.width(120.dp),
+                        )
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "Digital Solutions for Growing Businesses",
