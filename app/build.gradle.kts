@@ -24,8 +24,13 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("String", "ACTIVE_API_URL", "\"https://knt-trip-booking-app-spring-boot-backend-production.up.railway.app/\"")
+            buildConfigField("Boolean", "USE_MOCK_DATA", "false")
+        }
+        create("local") {
+            initWith(getByName("debug"))
             buildConfigField("String", "ACTIVE_API_URL", "\"http://10.0.2.2:8080/\"")
-            buildConfigField("Boolean", "USE_MOCK_DATA", "true")
+            buildConfigField("Boolean", "USE_MOCK_DATA", "false")
         }
         create("staging") {
             initWith(getByName("debug"))
