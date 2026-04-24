@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,13 +51,32 @@ fun SignUpScreen(
 
     val isLoading      = signUpState is ApiResult.Loading
     val passwordsMatch = confirmPassword.isEmpty() || password == confirmPassword
+    var showSuccess    by remember { mutableStateOf(false) }
+    var registeredName by remember { mutableStateOf("") }
 
     LaunchedEffect(signUpState) {
         when (val s = signUpState) {
-            is ApiResult.Success -> { viewModel.resetSignUpState(); onSignedUp() }
-            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetSignUpState() }
+            is ApiResult.Success -> {
+                registeredName = s.data.user.name.split(" ").first()
+                viewModel.resetSignUpState()
+                showSuccess = true
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetSignUpState() }
             else -> {}
         }
+    }
+
+    // Auto-navigate after showing success for 2 seconds
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            delay(2000)
+            onSignedUp()
+        }
+    }
+
+    if (showSuccess) {
+        SignUpSuccessScreen(name = registeredName, onGetStarted = onSignedUp)
+        return
     }
 
     val snackbarState = remember { SnackbarHostState() }
@@ -381,4 +401,125 @@ fun SignUpScreen(
         }
     }
     } // Scaffold
+}
+
+@Composable
+private fun SignUpSuccessScreen(name: String, onGetStarted: () -> Unit) {
+    val c = LocalAppColors.current
+
+    var iconVisible   by remember { mutableStateOf(false) }
+    var textVisible   by remember { mutableStateOf(false) }
+    var buttonVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(100); iconVisible   = true
+        delay(400); textVisible   = true
+        delay(600); buttonVisible = true
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(listOf(c.bgGradientTop, c.bgGradientMid, c.bgGradientBottom))
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Subtle radial glow behind the icon
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    listOf(StatusGreen.copy(0.12f), Color.Transparent),
+                    center = Offset(Float.POSITIVE_INFINITY / 2, Float.POSITIVE_INFINITY / 3),
+                    radius = 700f,
+                )
+            )
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            modifier = Modifier.padding(horizontal = 40.dp),
+        ) {
+            // Animated check icon
+            AnimatedVisibility(
+                visible = iconVisible,
+                enter   = scaleIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness    = Spring.StiffnessMedium,
+                    )
+                ) + fadeIn(tween(300)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(StatusGreen.copy(0.15f))
+                        .border(2.dp, StatusGreen.copy(0.4f), androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint     = StatusGreen,
+                        modifier = Modifier.size(52.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // Text block
+            AnimatedVisibility(
+                visible = textVisible,
+                enter   = fadeIn(tween(500)) + slideInVertically(tween(500, easing = EaseOutCubic)) { 30 },
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Welcome${if (name.isNotBlank()) ", $name!" else "!"}",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color      = c.textBright,
+                        ),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Your account has been created successfully.\nYou're all set to start booking trips.",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = c.textMuted),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(40.dp))
+
+            // Button
+            AnimatedVisibility(
+                visible = buttonVisible,
+                enter   = fadeIn(tween(400)) + slideInVertically(tween(400, easing = EaseOutCubic)) { 20 },
+            ) {
+                Button(
+                    onClick   = onGetStarted,
+                    modifier  = Modifier.fillMaxWidth().height(54.dp),
+                    shape     = RoundedCornerShape(14.dp),
+                    colors    = ButtonDefaults.buttonColors(
+                        containerColor = StatusGreen,
+                        contentColor   = Color.White,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                ) {
+                    Icon(Icons.Rounded.RocketLaunch, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "Get Started",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize   = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    )
+                }
+            }
+        }
+    }
 }
