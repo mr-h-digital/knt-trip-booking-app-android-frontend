@@ -112,9 +112,9 @@ fun ProfileScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text(name, style = MaterialTheme.typography.headlineMedium, color = c.textBright)
+                    Text(name, style = MaterialTheme.typography.headlineMedium, color = c.textOnBg)
                     Text(role.lowercase().replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        style = MaterialTheme.typography.bodySmall, color = c.textOnBg.copy(alpha = 0.65f))
                 }
             }
 
@@ -228,8 +228,8 @@ fun ProfileScreen(
                 ) {
                     KntLogoBadge(size = 48.dp)
                     Spacer(Modifier.height(8.dp))
-                    Text("K&T Transport", style = MaterialTheme.typography.titleMedium, color = c.textBright)
-                    Text("Moving Communities Forward", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                    Text("K&T Transport", style = MaterialTheme.typography.titleMedium, color = c.textOnBg)
+                    Text("Moving Communities Forward", style = MaterialTheme.typography.bodySmall, color = c.textOnBg.copy(alpha = 0.6f))
                     Spacer(Modifier.height(4.dp))
                     Text("v1.0.0", style = MaterialTheme.typography.labelSmall, color = c.textDim)
 

@@ -1051,7 +1051,7 @@ fun SectionHeader(title: String, action: String? = null, onAction: (() -> Unit)?
     ) {
         Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(c.yellow))
         Spacer(Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = c.textBright, modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.titleMedium, color = c.textOnBg, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {
             TextButton(onClick = onAction) {
                 Text(action, style = MaterialTheme.typography.labelMedium, color = c.blue)

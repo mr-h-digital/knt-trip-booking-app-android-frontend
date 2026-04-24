@@ -31,7 +31,8 @@ data class AppColors(
     val surface1        : Color,
     val surface2        : Color,
     val surface3        : Color,
-    val textBright      : Color,
+    val textBright      : Color,    // on-card text (white on dark cards)
+    val textOnBg        : Color,    // on-screen-background text (dark in light mode)
     val textMuted       : Color,
     val textDim         : Color,
     val borderColor     : Color,
@@ -56,6 +57,7 @@ val DarkAppColors = AppColors(
     surface2         = KntDark,
     surface3         = KntPanel,
     textBright       = KntWhite,
+    textOnBg         = KntWhite,    // dark bg → white text
     textMuted        = KntMuted,
     textDim          = Color(0xFF4A6A80),
     borderColor      = KntBorder,
@@ -82,6 +84,7 @@ val LightAppColors = AppColors(
     surface2         = KntDark,             // dark navy — same as dark mode
     surface3         = KntPanel,
     textBright       = KntWhite,            // white text on dark cards
+    textOnBg         = KntBlack,            // white screen bg → near-black text
     textMuted        = KntMuted,
     textDim          = Color(0xFF4A6A80),
     borderColor      = KntBorder,

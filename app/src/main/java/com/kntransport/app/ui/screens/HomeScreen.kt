@@ -341,7 +341,7 @@ fun HomeScreen(
             ) {
                 Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(c.yellow))
                 Spacer(Modifier.width(8.dp))
-                Text("Recent Trips", style = MaterialTheme.typography.titleMedium, color = c.textBright, modifier = Modifier.weight(1f))
+                Text("Recent Trips", style = MaterialTheme.typography.titleMedium, color = c.textOnBg, modifier = Modifier.weight(1f))
                 TextButton(onClick = onMyTrips) {
                     Text("See All", style = MaterialTheme.typography.labelMedium, color = c.blue)
                 }
@@ -369,7 +369,7 @@ fun HomeScreen(
             ) {
                 Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(c.yellow))
                 Spacer(Modifier.width(8.dp))
-                Text("Available Lift Clubs", style = MaterialTheme.typography.titleMedium, color = c.textBright, modifier = Modifier.weight(1f))
+                Text("Available Lift Clubs", style = MaterialTheme.typography.titleMedium, color = c.textOnBg, modifier = Modifier.weight(1f))
                 TextButton(onClick = onLiftClubs) {
                     Text("Browse All", style = MaterialTheme.typography.labelMedium, color = c.blue)
                 }

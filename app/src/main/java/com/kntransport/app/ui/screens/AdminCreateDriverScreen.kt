@@ -258,7 +258,7 @@ private fun DriverCreatedSuccess(driverName: String, onDone: () -> Unit) {
             ) {
                 Icon(Icons.Rounded.CheckCircle, null, tint = StatusGreen, modifier = Modifier.size(44.dp))
             }
-            Text("Driver Account Created!", style = MaterialTheme.typography.headlineSmall, color = c.textBright)
+            Text("Driver Account Created!", style = MaterialTheme.typography.headlineSmall, color = c.textOnBg)
             Surface(shape = RoundedCornerShape(12.dp), color = c.surface2) {
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.LocalShipping, null, tint = KntYellow, modifier = Modifier.size(18.dp))

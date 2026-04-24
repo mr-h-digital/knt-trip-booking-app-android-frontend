@@ -180,7 +180,7 @@ private fun VehicleAddedSuccess(
             ) {
                 Icon(Icons.Rounded.CheckCircle, null, tint = StatusGreen, modifier = Modifier.size(44.dp))
             }
-            Text("Vehicle Added!", style = MaterialTheme.typography.headlineSmall, color = c.textBright)
+            Text("Vehicle Added!", style = MaterialTheme.typography.headlineSmall, color = c.textOnBg)
             Surface(shape = RoundedCornerShape(12.dp), color = c.surface2) {
                 Row(
                     Modifier.padding(horizontal = 20.dp, vertical = 12.dp),

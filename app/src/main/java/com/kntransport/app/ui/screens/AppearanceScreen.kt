@@ -39,7 +39,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
             Text(
                 "Choose a theme",
                 style = MaterialTheme.typography.headlineSmall,
-                color = c.textBright,
+                color = c.textOnBg,
             )
             Spacer(Modifier.height(4.dp))
             Text(
