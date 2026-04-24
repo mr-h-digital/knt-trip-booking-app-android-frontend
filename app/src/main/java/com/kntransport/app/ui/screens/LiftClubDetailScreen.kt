@@ -48,7 +48,7 @@ fun LiftClubDetailScreen(
     }
 
     val club = (clubState as ApiResult.Success<LiftClubDto>).data
-    var subscribed  by remember(club.id) { mutableStateOf(club.id in SampleData.myLiftClubSubscriptions) }
+    var subscribed  by remember(club.id) { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
     var errorMsg    by remember { mutableStateOf<String?>(null) }
 

@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kntransport.app.data.SampleData
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -33,13 +32,11 @@ fun ProfileScreen(
 
     LaunchedEffect(Unit) { viewModel.loadProfile() }
 
-    // Fall back to SampleData while the API call is in-flight or on error
     val apiUser = (profileState as? ApiResult.Success)?.data
-    val name  = apiUser?.name  ?: SampleData.currentUser.name
-    val email = apiUser?.email ?: SampleData.currentUser.email
-    val phone = apiUser?.phone ?: SampleData.currentUser.phone
-    val role  = apiUser?.role  ?: SampleData.currentUser.role.name
-    val user = SampleData.currentUser  // still needed for avatarUri and role enum
+    val name  = apiUser?.name  ?: ""
+    val email = apiUser?.email ?: ""
+    val phone = apiUser?.phone ?: ""
+    val role  = apiUser?.role  ?: ""
     var showSignOutDialog by remember { mutableStateOf(false) }
     val themeMode = LocalThemeMode.current
 
@@ -98,7 +95,7 @@ fun ProfileScreen(
                     Box(contentAlignment = Alignment.BottomEnd) {
                         UserAvatar(
                             name      = name,
-                            avatarUri = user.avatarUri,
+                            avatarUri = null,
                             size      = 88.dp,
                             onClick   = onEditProfile,
                         )
@@ -135,8 +132,8 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "My Activity")
                 KntCard {
-                    when (user.role) {
-                        com.kntransport.app.data.UserRole.DRIVER -> {
+                    when (role.uppercase()) {
+                        "DRIVER" -> {
                             // Counts shown from API profile fields when available
                             val vInfo = apiUser?.currentVehicleMake?.let { "$it ${apiUser.currentVehicleModel ?: ""}" }?.trim()
                             if (!vInfo.isNullOrBlank()) {
@@ -145,12 +142,12 @@ fun ProfileScreen(
                             }
                             ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Driver", KntYellow)
                         }
-                        com.kntransport.app.data.UserRole.ADMIN -> {
+                        "ADMIN" -> {
                             ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Administrator", KntOrange)
                         }
                         else -> {
                             ActivityRow(Icons.Rounded.Groups, "Lift Club Subscriptions",
-                                "${SampleData.myLiftClubSubscriptions.size}", c.yellow)
+                                "—", c.yellow)
                             KntDivider()
                             ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Commuter", c.blue)
                         }

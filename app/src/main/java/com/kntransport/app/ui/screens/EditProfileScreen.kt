@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.*
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kntransport.app.data.SampleData
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -37,27 +36,23 @@ fun EditProfileScreen(
 ) {
     val c           = LocalAppColors.current
     val context     = LocalContext.current
-    val user        = SampleData.currentUser
+    val profileState by viewModel.profile.collectAsState()
+    val apiUser = (profileState as? ApiResult.Success)?.data
     val updateState by viewModel.updateState.collectAsState()
 
-    var name  by remember { mutableStateOf(user.name) }
-    var email by remember { mutableStateOf(user.email) }
-    var phone by remember { mutableStateOf(user.phone) }
-    var pendingAvatarUri by remember { mutableStateOf(user.avatarUri) }
+    var name  by remember(apiUser) { mutableStateOf(apiUser?.name  ?: "") }
+    var email by remember(apiUser) { mutableStateOf(apiUser?.email ?: "") }
+    var phone by remember(apiUser) { mutableStateOf(apiUser?.phone ?: "") }
+    var pendingAvatarUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val isLoading = updateState is ApiResult.Loading
 
+    LaunchedEffect(Unit) { viewModel.loadProfile() }
+
     LaunchedEffect(updateState) {
         when (val s = updateState) {
             is ApiResult.Success -> {
-                // Persist name locally so other screens see it instantly
-                SampleData.currentUser = SampleData.currentUser.copy(
-                    name      = s.data.name,
-                    email     = s.data.email,
-                    phone     = s.data.phone,
-                    avatarUri = pendingAvatarUri,
-                )
                 viewModel.resetUpdateState()
                 onSaved()
             }
@@ -99,14 +94,14 @@ fun EditProfileScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) cameraLauncher.launch(cameraUri) }
 
-    val isDirty = name != user.name || email != user.email
-        || phone != user.phone || pendingAvatarUri != user.avatarUri
+    val isDirty = name != (apiUser?.name ?: "") || email != (apiUser?.email ?: "")
+        || phone != (apiUser?.phone ?: "") || pendingAvatarUri != null
     val canSave = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && !isLoading
 
     val handleBack = { if (isDirty) showDiscardDialog = true else onBack() }
 
     val doSave = {
-        if (pendingAvatarUri != null && pendingAvatarUri != user.avatarUri) {
+        if (pendingAvatarUri != null) {
             viewModel.uploadAvatar(context, pendingAvatarUri!!)
         } else {
             viewModel.updateProfile(name.trim(), email.trim(), phone.trim())
@@ -192,7 +187,7 @@ fun EditProfileScreen(
                     // Avatar with camera overlay badge
                     Box(contentAlignment = Alignment.BottomEnd) {
                         UserAvatar(
-                            name      = name.ifBlank { user.name },
+                            name      = name.ifBlank { apiUser?.name ?: "" },
                             avatarUri = pendingAvatarUri,
                             size      = 88.dp,
                             onClick   = { showPhotoSheet = true },
@@ -237,7 +232,7 @@ fun EditProfileScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text("Role", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
-                            Text(user.role.name.lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = c.textDim)
+                            Text((apiUser?.role ?: "").lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = c.textDim)
                         }
                         Surface(shape = RoundedCornerShape(6.dp), color = c.surface2) {
                             Text("Assigned by admin", style = MaterialTheme.typography.labelSmall, color = c.textDim,

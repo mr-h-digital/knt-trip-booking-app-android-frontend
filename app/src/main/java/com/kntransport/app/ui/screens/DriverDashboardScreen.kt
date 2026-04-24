@@ -25,6 +25,7 @@ import com.kntransport.app.ui.components.DriverNavTab
 import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.viewmodel.DriverViewModel
+import com.kntransport.app.viewmodel.UserViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -37,19 +38,28 @@ fun DriverDashboardScreen(
     onNotifications: () -> Unit,
     onTripDetail   : (String) -> Unit,
     viewModel      : DriverViewModel = viewModel(),
+    userViewModel  : UserViewModel = viewModel(),
+    notifViewModel : com.kntransport.app.viewmodel.NotificationViewModel = viewModel(),
 ) {
-    val c          = LocalAppColors.current
-    val driver     = SampleData.currentUser
-    val tripsState by viewModel.trips.collectAsState()
+    val c             = LocalAppColors.current
+    val profileState  by userViewModel.profile.collectAsState()
+    val tripsState    by viewModel.trips.collectAsState()
+    val notifState    by notifViewModel.notifications.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.loadTrips() }
+    LaunchedEffect(Unit) {
+        viewModel.loadTrips()
+        userViewModel.loadProfile()
+        notifViewModel.loadNotifications()
+    }
+
+    val displayName = (profileState as? ApiResult.Success)?.data?.name ?: ""
 
     val today      = LocalDate.now()
     val allTrips   = (tripsState as? ApiResult.Success)?.data ?: emptyList()
     val todayTrips = allTrips.filter { runCatching { LocalDate.parse(it.date) }.getOrNull() == today }
     val activeTrip = todayTrips.firstOrNull { it.status == "IN_PROGRESS" }
     val nextTrip   = todayTrips.firstOrNull { it.status in listOf("CONFIRMED", "QUOTE_ACCEPTED") }
-    val unreadCount = SampleData.notifications.count { !it.read }
+    val unreadCount = (notifState as? ApiResult.Success)?.data?.count { !it.read } ?: 0
     var selectedTab  by remember { mutableIntStateOf(0) }
 
     val driverTabs = DriverNavTab.entries.map { NavTabItem(it.label, it.icon) }
@@ -102,7 +112,7 @@ fun DriverDashboardScreen(
                         ) {
                             Text(greeting(), style = MaterialTheme.typography.bodySmall, color = KntMuted)
                             GradientText(
-                                text   = driver.name,
+                                text   = displayName,
                                 style  = MaterialTheme.typography.headlineSmall,
                                 colors = listOf(KntWhite, KntYellow),
                             )
@@ -149,7 +159,7 @@ fun DriverDashboardScreen(
                             }
                         }
                         IconButton(onClick = onProfile) {
-                            UserAvatar(name = driver.name, avatarUri = driver.avatarUri, size = 32.dp)
+                            UserAvatar(name = displayName, avatarUri = SampleData.currentUser.avatarUri, size = 32.dp)
                         }
                     }
                 }
@@ -260,8 +270,9 @@ fun DriverDashboardScreen(
                 Spacer(Modifier.height(24.dp))
                 SectionHeader(title = "My Vehicle")
                 Spacer(Modifier.height(10.dp))
-                val assignedVehicle = SampleData.vehicles.firstOrNull { it.assignedDriverId == driver.id }
-                if (assignedVehicle != null) {
+                val apiProfile = (profileState as? ApiResult.Success)?.data
+                val hasVehicle = apiProfile?.currentVehicleId != null
+                if (hasVehicle && apiProfile != null) {
                     Surface(
                         shape  = RoundedCornerShape(14.dp),
                         color  = c.surface2,
@@ -270,34 +281,38 @@ fun DriverDashboardScreen(
                     ) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             VehiclePhotoAvatar(
-                                photoUrl = assignedVehicle.photoUrl,
+                                photoUrl = apiProfile.currentVehiclePhotoUrl,
                                 size     = 48.dp,
                                 shape    = RoundedCornerShape(12.dp),
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "${assignedVehicle.colour} ${assignedVehicle.make} ${assignedVehicle.model}",
+                                    "${apiProfile.currentVehicleColour ?: ""} ${apiProfile.currentVehicleMake ?: ""} ${apiProfile.currentVehicleModel ?: ""}".trim(),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = c.textBright,
                                 )
-                                Text(
-                                    "${assignedVehicle.vehicleType.name.lowercase().replaceFirstChar { it.uppercase() }} · ${assignedVehicle.year}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = c.textMuted,
-                                )
+                                if (apiProfile.currentVehicleType != null) {
+                                    Text(
+                                        apiProfile.currentVehicleType.lowercase().replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = c.textMuted,
+                                    )
+                                }
                             }
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = c.blue.copy(0.12f),
-                                border = BorderStroke(1.dp, c.blue.copy(0.3f)),
-                            ) {
-                                Text(
-                                    assignedVehicle.plate,
-                                    style    = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                                    color    = c.blue,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                )
+                            if (apiProfile.currentVehiclePlate != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = c.blue.copy(0.12f),
+                                    border = BorderStroke(1.dp, c.blue.copy(0.3f)),
+                                ) {
+                                    Text(
+                                        apiProfile.currentVehiclePlate,
+                                        style    = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                        color    = c.blue,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    )
+                                }
                             }
                         }
                     }

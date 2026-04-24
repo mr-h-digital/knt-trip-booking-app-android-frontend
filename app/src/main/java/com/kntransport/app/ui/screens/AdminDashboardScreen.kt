@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.SampleData
 import com.kntransport.app.network.AnalyticsDto
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
@@ -25,6 +24,7 @@ import com.kntransport.app.ui.components.AdminNavTab
 import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.viewmodel.AdminViewModel
+import com.kntransport.app.viewmodel.UserViewModel
 
 @Composable
 fun AdminDashboardScreen(
@@ -33,17 +33,24 @@ fun AdminDashboardScreen(
     onTrips       : () -> Unit,
     onAnalytics   : () -> Unit,
     onFinancials  : () -> Unit,
-    onFleet       : () -> Unit = {},
-    onProfile     : () -> Unit = {},
-    viewModel     : AdminViewModel = viewModel(),
+    onFleet        : () -> Unit = {},
+    onProfile      : () -> Unit = {},
+    viewModel      : AdminViewModel = viewModel(),
+    userViewModel  : UserViewModel = viewModel(),
 ) {
     val c              = LocalAppColors.current
-    val user           = SampleData.currentUser
+    val profileState  by userViewModel.profile.collectAsState()
     var selectedTab    by remember { mutableIntStateOf(0) }
     val adminTabs      = AdminNavTab.entries.map { NavTabItem(it.label, it.icon) }
     val analyticsState by viewModel.analytics.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.loadAnalytics() }
+    LaunchedEffect(Unit) {
+        viewModel.loadAnalytics()
+        userViewModel.loadProfile()
+    }
+
+    val displayName = (profileState as? ApiResult.Success)?.data?.name
+        ?: ""
 
     val analytics = (analyticsState as? ApiResult.Success<AnalyticsDto>)?.data
 
@@ -92,7 +99,7 @@ fun AdminDashboardScreen(
                         style = MaterialTheme.typography.bodySmall.copy(color = KntMuted),
                     )
                     GradientText(
-                        text   = user.name,
+                        text   = displayName,
                         style  = MaterialTheme.typography.headlineSmall,
                         colors = listOf(KntWhite, KntYellow),
                     )

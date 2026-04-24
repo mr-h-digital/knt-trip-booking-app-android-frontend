@@ -28,11 +28,17 @@ fun QuoteReviewScreen(
     val c          = LocalAppColors.current
     val quoteState by viewModel.quoteState.collectAsState()
 
-    val isTrip = type == "TRIP"
-    // Amounts shown from SampleData while we still use it for the trip/club detail
-    val trip   = if (isTrip) SampleData.myTrips.firstOrNull { it.id == quoteId } else null
-    val club   = if (!isTrip) SampleData.liftClubs.firstOrNull { it.id == quoteId } else null
-    val amount = trip?.quotedAmount ?: club?.quotedAmount ?: 0.0
+    val isTrip     = type == "TRIP"
+    val tripState  by viewModel.selectedTrip.collectAsState()
+    val amount     = (tripState as? ApiResult.Success)?.data?.quotedAmount ?: 0.0
+    val tripDto    = (tripState as? ApiResult.Success)?.data
+    val paymentCycle = tripDto?.let {
+        if (!isTrip) PaymentCycle.MONTHLY else null
+    }
+
+    LaunchedEffect(quoteId) {
+        if (isTrip) viewModel.loadTrip(quoteId)
+    }
 
     var selectedCycle     by remember { mutableStateOf(PaymentCycle.MONTHLY) }
     var localDecision     by remember { mutableStateOf<Boolean?>(null) }
@@ -116,7 +122,7 @@ fun QuoteReviewScreen(
                             style = MaterialTheme.typography.displayMedium.copy(color = c.yellow),
                         )
                         Text(
-                            if (isTrip) "one-way trip" else "per person / ${club?.paymentCycle?.name?.lowercase() ?: ""}",
+                            if (isTrip) "one-way trip" else "per person",
                             style = MaterialTheme.typography.bodySmall, color = c.textMuted,
                         )
                         Spacer(Modifier.height(8.dp))
@@ -166,17 +172,11 @@ fun QuoteReviewScreen(
                 Spacer(Modifier.height(20.dp))
                 SectionHeader(title = "Booking Summary")
                 KntCard {
-                    if (isTrip && trip != null) {
-                        InfoRow(Icons.Rounded.LocationOn, "Pickup", trip.pickupAddress)
-                        InfoRow(Icons.Rounded.Flag, "Drop-off", trip.dropAddress)
-                        InfoRow(Icons.Rounded.Schedule, "Date & Time", "${trip.date} · ${trip.time}")
-                        InfoRow(Icons.Rounded.Person, "Passengers", trip.passengers.toString())
-                    } else if (club != null) {
-                        InfoRow(Icons.Rounded.LocationOn, "Pickup Area", club.pickupArea)
-                        InfoRow(Icons.Rounded.Flag, "Drop Area", club.dropArea)
-                        InfoRow(Icons.Rounded.Schedule, "Departs", club.departureTime.toString())
-                        InfoRow(Icons.Rounded.CalendarViewWeek, "Days", club.daysOfWeek.joinToString(", "))
-                        InfoRow(Icons.Rounded.People, "Passengers", "${club.subscriberCount} commuters")
+                    if (isTrip && tripDto != null) {
+                        InfoRow(Icons.Rounded.LocationOn, "Pickup",     tripDto.pickupAddress)
+                        InfoRow(Icons.Rounded.Flag,       "Drop-off",   tripDto.dropAddress)
+                        InfoRow(Icons.Rounded.Schedule,   "Date & Time","${tripDto.date} · ${tripDto.time}")
+                        InfoRow(Icons.Rounded.Person,     "Passengers", tripDto.passengers.toString())
                     }
                 }
 

@@ -31,8 +31,10 @@ fun RateTripScreen(
 ) {
     val c         = LocalAppColors.current
     val rateState by viewModel.rateState.collectAsState()
-    // Still use SampleData for driver name display only
-    val trip = SampleData.myTrips.firstOrNull { it.id == tripId }
+    val tripState by viewModel.selectedTrip.collectAsState()
+    val tripDto   = (tripState as? ApiResult.Success)?.data
+
+    LaunchedEffect(tripId) { viewModel.loadTrip(tripId) }
 
     var rating      by remember { mutableIntStateOf(0) }
     var hoveredStar by remember { mutableIntStateOf(0) }
@@ -126,7 +128,7 @@ fun RateTripScreen(
                 Spacer(Modifier.height(32.dp))
 
                 // Driver avatar + name
-                if (trip?.driverName != null) {
+                if (tripDto?.driverName != null) {
                     Box(
                         Modifier.size(72.dp).clip(CircleShape)
                             .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.6f)))),
@@ -135,11 +137,11 @@ fun RateTripScreen(
                         Icon(Icons.Rounded.Person, null, tint = c.bgDeep, modifier = Modifier.size(38.dp))
                     }
                     Spacer(Modifier.height(10.dp))
-                    Text(trip.driverName, style = MaterialTheme.typography.headlineSmall, color = c.textBright)
+                    Text(tripDto!!.driverName!!, style = MaterialTheme.typography.headlineSmall, color = c.textBright)
                     Text("K&T Transport Driver", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "To: ${trip.dropAddress}",
+                        "To: ${tripDto!!.dropAddress}",
                         style = MaterialTheme.typography.bodySmall,
                         color = c.textDim,
                         textAlign = TextAlign.Center,

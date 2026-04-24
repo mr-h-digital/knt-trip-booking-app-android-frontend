@@ -16,10 +16,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.UserViewModel
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -31,18 +34,34 @@ fun HomeScreen(
     onNotifications : () -> Unit,
     onProfile       : () -> Unit,
     onTripDetail    : (String) -> Unit,
+    userViewModel   : UserViewModel = viewModel(),
+    tripViewModel   : com.kntransport.app.viewmodel.TripViewModel = viewModel(),
+    liftClubViewModel: com.kntransport.app.viewmodel.LiftClubViewModel = viewModel(),
+    notifViewModel  : com.kntransport.app.viewmodel.NotificationViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
-    var selectedTab by remember { mutableStateOf(KntNavTab.HOME) }
+    val c            = LocalAppColors.current
+    val profileState by userViewModel.profile.collectAsState()
+    val tripsState   by tripViewModel.trips.collectAsState()
+    val clubsState   by liftClubViewModel.clubs.collectAsState()
+    val notifState   by notifViewModel.notifications.collectAsState()
 
-    // Simulate shimmer loading on first enter
-    var loading by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1200)
-        loading = false
+        userViewModel.loadProfile()
+        tripViewModel.loadTrips()
+        liftClubViewModel.loadLiftClubs()
+        notifViewModel.loadNotifications()
     }
 
-    val unreadCount = SampleData.notifications.count { !it.read }
+    val displayName  = (profileState as? ApiResult.Success)?.data?.name ?: ""
+    val displayRole  = (profileState as? ApiResult.Success)?.data?.role ?: ""
+    val recentTrips  = (tripsState   as? ApiResult.Success)?.data?.take(2) ?: emptyList()
+    val recentClubs  = (clubsState   as? ApiResult.Success)?.data?.take(2) ?: emptyList()
+    val unreadCount  = (notifState   as? ApiResult.Success)?.data?.count { !it.read } ?: 0
+
+    val tripsLoading = tripsState  is ApiResult.Loading
+    val clubsLoading = clubsState  is ApiResult.Loading
+
+    var selectedTab by remember { mutableStateOf(KntNavTab.HOME) }
     val scrollState = rememberScrollState()
 
     // Parallax: header collapses from full → compact as user scrolls
@@ -93,8 +112,7 @@ fun HomeScreen(
         )
     }
 
-    val user = SampleData.currentUser
-    val avatarOverlap = 40.dp   // how much avatar hangs below the hero
+    val avatarOverlap = 40.dp
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -160,14 +178,16 @@ fun HomeScreen(
                             ),
                         )
                         GradientText(
-                            text   = user.name.split(" ").first(),
+                            text   = displayName.split(" ").first(),
                             style  = MaterialTheme.typography.headlineMedium,
                             colors = listOf(KntWhite, KntYellow),
                         )
-                        Text(
-                            user.role.name.lowercase().replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall.copy(color = KntMuted),
-                        )
+                        if (displayRole.isNotBlank()) {
+                            Text(
+                                displayRole.lowercase().replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.labelSmall.copy(color = KntMuted),
+                            )
+                        }
                     }
                 }
 
@@ -227,8 +247,8 @@ fun HomeScreen(
                 val avatarSize = lerp(72.dp, 0.dp, collapseProgress)
                 if (avatarSize > 8.dp) {
                     UserAvatar(
-                        name      = user.name,
-                        avatarUri = user.avatarUri,
+                        name      = displayName,
+                        avatarUri = null,
                         size      = avatarSize,
                         onClick   = onProfile,
                         modifier  = Modifier
@@ -324,14 +344,14 @@ fun HomeScreen(
                 }
             }
             Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (loading) {
+                if (tripsLoading) {
                     repeat(2) { TripCardShimmer() }
-                } else if (SampleData.myTrips.isEmpty()) {
+                } else if (recentTrips.isEmpty()) {
                     TripEmptyState(onBookTrip)
                 } else {
-                    SampleData.myTrips.take(2).forEachIndexed { idx, trip ->
+                    recentTrips.forEachIndexed { idx, trip ->
                         StaggeredItem(index = idx) {
-                            TripSummaryCard(trip = trip, onClick = { onTripDetail(trip.id) })
+                            TripDtoCard(trip = trip, onClick = { onTripDetail(trip.id) })
                         }
                     }
                 }
@@ -352,14 +372,14 @@ fun HomeScreen(
                 }
             }
             Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (loading) {
+                if (clubsLoading) {
                     repeat(2) { TripCardShimmer() }
-                } else if (SampleData.liftClubs.isEmpty()) {
+                } else if (recentClubs.isEmpty()) {
                     LiftClubEmptyState(onLiftClubs)
                 } else {
-                    SampleData.liftClubs.take(2).forEachIndexed { idx, club ->
+                    recentClubs.forEachIndexed { idx, club ->
                         StaggeredItem(index = idx + 2) {
-                            LiftClubSummaryCard(club = club, onClick = { onLiftClubDetail(club.id) })
+                            LiftClubDtoCard(club = club, isSubscribed = false, onClick = { onLiftClubDetail(club.id) })
                         }
                     }
                 }
