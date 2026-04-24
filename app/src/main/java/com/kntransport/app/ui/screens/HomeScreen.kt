@@ -319,14 +319,27 @@ fun HomeScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // ── Stats strip ───────────────────────────────────────────────
+            // ── Personal stats strip ──────────────────────────────────────
+            val allTrips       = (tripsState as? ApiResult.Success)?.data ?: emptyList()
+            val tripsTaken     = allTrips.size
+            val tripsCompleted = allTrips.count { it.status == "COMPLETED" }
+            val amountSpent    = allTrips
+                .filter { it.status == "COMPLETED" }
+                .mapNotNull { it.quotedAmount }
+                .sum()
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                StatChip("3+", "Years on road", c.blue,   Modifier.weight(1f))
-                StatChip("2",  "Vehicles",      c.yellow, Modifier.weight(1f))
-                StatChip("100%","Community",    c.orange, Modifier.weight(1f))
+                StatChip(tripsTaken.toString(),     "Trips Booked", c.blue,   Modifier.weight(1f))
+                StatChip(tripsCompleted.toString(), "Completed",    c.yellow, Modifier.weight(1f))
+                StatChip(
+                    value    = "R${String.format("%.0f", amountSpent)}",
+                    label    = "Spent",
+                    color    = c.orange,
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -567,16 +580,18 @@ private fun QuickActionCard(
 @Composable
 private fun StatChip(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
     val c = LocalAppColors.current
-    // Animated count-up for numeric values
-    val numericPart = value.filter { it.isDigit() }
-    val suffix      = value.filter { !it.isDigit() }
+    // Animated count-up — supports leading prefix (e.g. "R250") and trailing suffix (e.g. "3+")
+    val prefix      = value.takeWhile { !it.isDigit() }
+    val remainder   = value.dropWhile { !it.isDigit() }
+    val numericPart = remainder.takeWhile { it.isDigit() }
+    val suffix      = remainder.dropWhile { it.isDigit() }
     val target      = numericPart.toIntOrNull() ?: 0
     val animatedVal by animateIntAsState(
         targetValue   = target,
         animationSpec = tween(durationMillis = 1200, easing = EaseOutCubic),
         label         = "statCounter",
     )
-    val displayVal = if (numericPart.isNotEmpty()) "$animatedVal$suffix" else value
+    val displayVal = if (numericPart.isNotEmpty()) "$prefix$animatedVal$suffix" else value
 
     val isDark = LocalIsDarkTheme.current
     Column(
