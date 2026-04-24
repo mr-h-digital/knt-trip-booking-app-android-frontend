@@ -139,10 +139,13 @@ fun UserAvatar(
 ) {
     val c         = LocalAppColors.current
     val initials  = name.split(" ").mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString("")
+    // Border colour matches the screen background so the ring blends seamlessly
+    // into whatever is behind the avatar — white in light mode, near-black in dark.
+    val borderColor = c.bgDeep
     val baseMod   = modifier
         .size(size)
         .clip(CircleShape)
-        .border(2.5.dp, Brush.linearGradient(listOf(KntYellow, KntBlueBright)), CircleShape)
+        .border(4.dp, borderColor, CircleShape)
         .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
 
     Box(baseMod, contentAlignment = Alignment.Center) {

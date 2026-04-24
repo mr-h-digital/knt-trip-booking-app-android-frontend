@@ -37,18 +37,18 @@ private val KntDarkColorScheme = darkColorScheme(
 private val KntLightColorScheme = lightColorScheme(
     primary          = KntBlue,
     onPrimary        = Color.White,
-    primaryContainer = Color(0xFFD4E6F3),
-    secondary        = KntYellowDim,
+    primaryContainer = KntBorder,
+    secondary        = KntYellow,
     onSecondary      = KntBlack,
     tertiary         = KntOrange,
     onTertiary       = Color.White,
-    background       = Color(0xFFF0F6FC),
-    onBackground     = KntBlack,
-    surface          = Color(0xFFE2EEF8),
-    onSurface        = KntBlack,
-    surfaceVariant   = Color(0xFFD4E6F3),
-    onSurfaceVariant = Color(0xFF2A5A7A),
-    outline          = Color(0x501A8FE3),
+    background       = Color(0xFFFFFFFF),   // white screen background
+    onBackground     = KntWhite,
+    surface          = Color(0xFF0A1E35),   // dark card surface
+    onSurface        = KntWhite,
+    surfaceVariant   = KntDark,
+    onSurfaceVariant = KntMuted,
+    outline          = KntBorder,
 )
 
 @Composable
@@ -61,7 +61,7 @@ fun KNTTransportTheme(isDark: Boolean = true, themeMode: ThemeMode = ThemeMode.D
             val window = (view.context as android.app.Activity).window
             window.statusBarColor     = android.graphics.Color.TRANSPARENT
             window.navigationBarColor = android.graphics.Color.TRANSPARENT
-            window.decorView.setBackgroundColor(if (isDark) 0xFF061220.toInt() else 0xFFF0F6FC.toInt())
+            window.decorView.setBackgroundColor(if (isDark) 0xFF061220.toInt() else 0xFFFFFFFF.toInt())
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars     = false
                 isAppearanceLightNavigationBars = !isDark
