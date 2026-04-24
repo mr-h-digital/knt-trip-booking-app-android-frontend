@@ -27,18 +27,42 @@ import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminVehicleDetailScreen(
-    vehicle        : VehicleDto,
-    onBack         : () -> Unit,
-    onEdit         : () -> Unit = {},
-    onAssignDriver : () -> Unit = {},
-    viewModel      : AdminViewModel = viewModel(),
+    vehicle   : VehicleDto,
+    onBack    : () -> Unit,
+    onEdit    : () -> Unit = {},
+    viewModel : AdminViewModel = viewModel(),
 ) {
     val c                = LocalAppColors.current
     val deactivateState  by viewModel.deactivateState.collectAsState()
     val reactivateState  by viewModel.reactivateState.collectAsState()
+    val assignState      by viewModel.assignState.collectAsState()
+    val usersState       by viewModel.users.collectAsState()
+
     var showDialog       by remember { mutableStateOf(false) }
+    var showDriverPicker by remember { mutableStateOf(false) }
     var deactivated      by remember { mutableStateOf(!vehicle.active) }
+    var assignedDriverId   by remember { mutableStateOf(vehicle.assignedDriverId) }
+    var assignedDriverName by remember { mutableStateOf(vehicle.assignedDriverName) }
     var errorMessage     by remember { mutableStateOf<String?>(null) }
+
+    // Load drivers when the screen opens
+    LaunchedEffect(Unit) { viewModel.loadUsers(role = "DRIVER") }
+
+    LaunchedEffect(assignState) {
+        when (val s = assignState) {
+            is ApiResult.Success -> {
+                assignedDriverId   = s.data.id.takeIf { vehicle.assignedDriverId != null || s.data.currentVehicleId == vehicle.id }
+                // Refresh the driver list and update local state from the returned UserDto
+                val newDriverId   = if (s.data.currentVehicleId == vehicle.id) s.data.id else null
+                val newDriverName = if (s.data.currentVehicleId == vehicle.id) s.data.name else null
+                assignedDriverId   = newDriverId
+                assignedDriverName = newDriverName
+                viewModel.resetAssignState()
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetAssignState() }
+            else -> {}
+        }
+    }
 
     LaunchedEffect(deactivateState) {
         when (val s = deactivateState) {
@@ -58,6 +82,23 @@ fun AdminVehicleDetailScreen(
     val snackbarState = remember { SnackbarHostState() }
     LaunchedEffect(errorMessage) {
         errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
+    // Driver picker sheet
+    if (showDriverPicker) {
+        val drivers = (usersState as? ApiResult.Success)?.data ?: emptyList()
+        DriverPickerSheet(
+            drivers   = drivers,
+            isLoading = usersState is ApiResult.Loading,
+            currentId = assignedDriverId,
+            onSelect  = { driver ->
+                viewModel.assignVehicle(driver.id, vehicle.id)
+            },
+            onUnassign = if (assignedDriverId != null) ({
+                viewModel.assignVehicle(assignedDriverId!!, null)
+            }) else null,
+            onDismiss = { showDriverPicker = false },
+        )
     }
 
     if (showDialog) {
@@ -171,9 +212,18 @@ fun AdminVehicleDetailScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                SectionHeader(title = "Assigned Driver")
+                SectionHeader(
+                    title    = "Assigned Driver",
+                    action   = if (assignedDriverName != null) "Change" else "Assign",
+                    onAction = { showDriverPicker = true },
+                )
 
-                if (vehicle.assignedDriverName != null) {
+                val isAssigning = assignState is ApiResult.Loading
+                if (isAssigning) {
+                    Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                } else if (assignedDriverName != null) {
                     KntCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -185,7 +235,7 @@ fun AdminVehicleDetailScreen(
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(vehicle.assignedDriverName, style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                                Text(assignedDriverName!!, style = MaterialTheme.typography.titleSmall, color = c.textBright)
                             }
                             Surface(shape = RoundedCornerShape(8.dp), color = KntYellow.copy(0.12f)) {
                                 Text("Driver", style = MaterialTheme.typography.labelSmall, color = KntYellow,
@@ -195,16 +245,16 @@ fun AdminVehicleDetailScreen(
                     }
                 } else {
                     Surface(
-                        shape  = RoundedCornerShape(14.dp),
-                        color  = c.surface2,
-                        border = BorderStroke(1.dp, KntOrange.copy(0.3f)),
+                        shape    = RoundedCornerShape(14.dp),
+                        color    = c.surface2,
+                        border   = BorderStroke(1.dp, KntOrange.copy(0.3f)),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.PersonOff, null, tint = c.textDim, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("No driver assigned", style = MaterialTheme.typography.bodyMedium, color = c.textMuted, modifier = Modifier.weight(1f))
-                            TextButton(onClick = onAssignDriver) {
+                            TextButton(onClick = { showDriverPicker = true }) {
                                 Text("Assign Driver", style = MaterialTheme.typography.labelMedium, color = KntOrange)
                             }
                         }

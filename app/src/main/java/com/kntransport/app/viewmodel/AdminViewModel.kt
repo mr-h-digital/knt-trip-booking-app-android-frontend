@@ -149,12 +149,17 @@ class AdminViewModel : ViewModel() {
 
     fun resetReactivateState() { _reactivateState.value = null }
 
+    private val _assignState = MutableStateFlow<ApiResult<UserDto>?>(null)
+    val assignState: StateFlow<ApiResult<UserDto>?> = _assignState
+
     fun assignVehicle(driverId: String, vehicleId: String?) {
         viewModelScope.launch {
-            repo.assignVehicle(driverId, vehicleId)
-            loadUsers()
+            _assignState.value = ApiResult.Loading
+            _assignState.value = repo.assignVehicle(driverId, vehicleId)
         }
     }
+
+    fun resetAssignState() { _assignState.value = null }
 
     fun uploadVehiclePhoto(id: String, file: java.io.File) {
         viewModelScope.launch {

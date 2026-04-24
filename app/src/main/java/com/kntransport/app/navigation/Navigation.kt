@@ -383,7 +383,7 @@ fun KntNavHost(
             AdminUserDetailScreen(
                 user      = user,
                 onBack    = { navController.popBackStack() },
-                onEdit    = { navController.popBackStack() },
+                onEdit    = { navController.navigate(Routes.ADMIN_CREATE_DRIVER) },
                 viewModel = adminViewModel,
             )
         }
@@ -428,11 +428,10 @@ fun KntNavHost(
                 return@composable
             }
             AdminVehicleDetailScreen(
-                vehicle        = vehicle,
-                onBack         = { navController.popBackStack() },
-                onEdit         = { navController.navigate(Routes.ADMIN_EDIT_VEHICLE) },
-                onAssignDriver = { navController.popBackStack() },
-                viewModel      = adminViewModel,
+                vehicle   = vehicle,
+                onBack    = { navController.popBackStack() },
+                onEdit    = { navController.navigate(Routes.ADMIN_EDIT_VEHICLE) },
+                viewModel = adminViewModel,
             )
         }
 

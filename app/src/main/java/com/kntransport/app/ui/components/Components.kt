@@ -34,6 +34,8 @@ import coil3.request.ImageRequest
 import com.kntransport.app.R
 import com.kntransport.app.data.TripStatus
 import com.kntransport.app.data.LiftClubStatus
+import com.kntransport.app.network.UserDto
+import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.theme.*
 
 // ── Screen scaffold with KNT header ──────────────────────────────────────────
@@ -329,6 +331,273 @@ fun CancelTripSheet(
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                 Text("Keep Trip", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
+            }
+        }
+    }
+}
+
+// ── Driver picker sheet (used from Vehicle Detail to assign a driver) ─────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DriverPickerSheet(
+    drivers      : List<UserDto>,
+    isLoading    : Boolean,
+    currentId    : String?,           // pre-selected / already assigned driver id
+    onSelect     : (UserDto) -> Unit,
+    onUnassign   : (() -> Unit)?,     // null when no driver is currently assigned
+    onDismiss    : () -> Unit,
+) {
+    val c = LocalAppColors.current
+    var query by remember { mutableStateOf("") }
+    val filtered = drivers.filter {
+        query.isBlank() || it.name.contains(query, ignoreCase = true) ||
+        it.email.contains(query, ignoreCase = true)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = c.surface1,
+        dragHandle = {
+            Box(Modifier.padding(vertical = 10.dp).width(36.dp).height(4.dp)
+                .clip(RoundedCornerShape(2.dp)).background(c.borderColor))
+        },
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                    .background(KntYellow.copy(0.12f)), Alignment.Center) {
+                    Icon(Icons.Rounded.Person, null, tint = KntYellow, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Assign Driver", style = MaterialTheme.typography.titleMedium, color = c.textBright)
+            }
+            Spacer(Modifier.height(14.dp))
+
+            OutlinedTextField(
+                value         = query,
+                onValueChange = { query = it },
+                placeholder   = { Text("Search drivers…", style = MaterialTheme.typography.bodySmall) },
+                leadingIcon   = { Icon(Icons.Rounded.Search, null, tint = c.textMuted, modifier = Modifier.size(18.dp)) },
+                trailingIcon  = if (query.isNotEmpty()) {{
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Rounded.Close, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
+                    }
+                }} else null,
+                singleLine    = true,
+                modifier      = Modifier.fillMaxWidth(),
+                shape         = RoundedCornerShape(12.dp),
+                colors        = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor      = c.blue,
+                    unfocusedBorderColor    = c.borderColor,
+                    focusedTextColor        = c.textBright,
+                    unfocusedTextColor      = c.textBright,
+                    cursorColor             = c.blue,
+                    focusedContainerColor   = c.surface2,
+                    unfocusedContainerColor = c.surface2,
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                isLoading -> Box(Modifier.fillMaxWidth().height(120.dp), Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                filtered.isEmpty() -> Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), Alignment.Center) {
+                    Text("No drivers found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                }
+                else -> Column(
+                    Modifier.verticalScroll(rememberScrollState()).heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    filtered.forEach { driver ->
+                        val isSelected = driver.id == currentId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) KntYellow.copy(0.08f) else c.surface2.copy(0.6f))
+                                .border(1.dp, if (isSelected) KntYellow.copy(0.45f) else c.borderColor, RoundedCornerShape(12.dp))
+                                .clickable { onSelect(driver); onDismiss() }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val initials = driver.name.split(" ")
+                                .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
+                            Box(
+                                Modifier.size(40.dp).clip(CircleShape)
+                                    .background(KntYellow.copy(if (isSelected) 0.3f else 0.12f)),
+                                Alignment.Center,
+                            ) {
+                                Text(initials, style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold), color = KntYellow)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(driver.name, style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                                Text(driver.email, style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                            }
+                            if (isSelected) {
+                                Icon(Icons.Rounded.CheckCircle, null, tint = KntYellow, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (onUnassign != null) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick  = { onUnassign(); onDismiss() },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    border   = BorderStroke(1.dp, StatusRed.copy(0.5f)),
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
+                ) {
+                    Icon(Icons.Rounded.PersonOff, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Remove assigned driver", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
+            }
+        }
+    }
+}
+
+// ── Vehicle picker sheet (used from User Detail to assign a vehicle) ──────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VehiclePickerSheet(
+    vehicles     : List<VehicleDto>,
+    isLoading    : Boolean,
+    currentId    : String?,           // pre-selected / already assigned vehicle id
+    onSelect     : (VehicleDto) -> Unit,
+    onUnassign   : (() -> Unit)?,
+    onDismiss    : () -> Unit,
+) {
+    val c = LocalAppColors.current
+    var query by remember { mutableStateOf("") }
+    val filtered = vehicles.filter {
+        query.isBlank() ||
+        it.make.contains(query, ignoreCase = true) ||
+        it.model.contains(query, ignoreCase = true) ||
+        it.plate.contains(query, ignoreCase = true)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = c.surface1,
+        dragHandle = {
+            Box(Modifier.padding(vertical = 10.dp).width(36.dp).height(4.dp)
+                .clip(RoundedCornerShape(2.dp)).background(c.borderColor))
+        },
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                    .background(KntBlue.copy(0.12f)), Alignment.Center) {
+                    Icon(Icons.Rounded.DirectionsBus, null, tint = KntBlue, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Assign Vehicle", style = MaterialTheme.typography.titleMedium, color = c.textBright)
+            }
+            Spacer(Modifier.height(14.dp))
+
+            OutlinedTextField(
+                value         = query,
+                onValueChange = { query = it },
+                placeholder   = { Text("Search by make, model or plate…", style = MaterialTheme.typography.bodySmall) },
+                leadingIcon   = { Icon(Icons.Rounded.Search, null, tint = c.textMuted, modifier = Modifier.size(18.dp)) },
+                trailingIcon  = if (query.isNotEmpty()) {{
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Rounded.Close, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
+                    }
+                }} else null,
+                singleLine    = true,
+                modifier      = Modifier.fillMaxWidth(),
+                shape         = RoundedCornerShape(12.dp),
+                colors        = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor      = c.blue,
+                    unfocusedBorderColor    = c.borderColor,
+                    focusedTextColor        = c.textBright,
+                    unfocusedTextColor      = c.textBright,
+                    cursorColor             = c.blue,
+                    focusedContainerColor   = c.surface2,
+                    unfocusedContainerColor = c.surface2,
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                isLoading -> Box(Modifier.fillMaxWidth().height(120.dp), Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                filtered.isEmpty() -> Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), Alignment.Center) {
+                    Text("No active vehicles found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                }
+                else -> Column(
+                    Modifier.verticalScroll(rememberScrollState()).heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    filtered.forEach { vehicle ->
+                        val isSelected = vehicle.id == currentId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) KntBlue.copy(0.08f) else c.surface2.copy(0.6f))
+                                .border(1.dp, if (isSelected) KntBlue.copy(0.45f) else c.borderColor, RoundedCornerShape(12.dp))
+                                .clickable { onSelect(vehicle); onDismiss() }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            VehiclePhotoAvatar(
+                                photoUrl = vehicle.photoUrl,
+                                size     = 40.dp,
+                                shape    = RoundedCornerShape(10.dp),
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "${vehicle.colour} ${vehicle.make} ${vehicle.model}",
+                                    style = MaterialTheme.typography.titleSmall, color = c.textBright,
+                                )
+                                Text(
+                                    "${vehicle.plate} · ${vehicle.vehicleType.lowercase().replaceFirstChar { it.uppercase() }}",
+                                    style = MaterialTheme.typography.bodySmall, color = c.textMuted,
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(Icons.Rounded.CheckCircle, null, tint = KntBlue, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (onUnassign != null) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick  = { onUnassign(); onDismiss() },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    border   = BorderStroke(1.dp, StatusRed.copy(0.5f)),
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
+                ) {
+                    Icon(Icons.Rounded.DirectionsBus, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Remove assigned vehicle", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
             }
         }
     }

@@ -19,23 +19,56 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.network.UserDto
+import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminUserDetailScreen(
-    user           : UserDto,
-    onBack         : () -> Unit,
-    onEdit         : () -> Unit = {},
-    onAssignVehicle: () -> Unit = {},
-    viewModel      : AdminViewModel = viewModel(),
+    user      : UserDto,
+    onBack    : () -> Unit,
+    onEdit    : () -> Unit = {},
+    viewModel : AdminViewModel = viewModel(),
 ) {
-    val c            = LocalAppColors.current
-    val deleteState  by viewModel.deleteState.collectAsState()
-    var showDialog   by remember { mutableStateOf(false) }
-    var deleted      by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val c               = LocalAppColors.current
+    val deleteState     by viewModel.deleteState.collectAsState()
+    val assignState     by viewModel.assignState.collectAsState()
+    val vehiclesState   by viewModel.vehicles.collectAsState()
+
+    var showDialog       by remember { mutableStateOf(false) }
+    var showVehiclePicker by remember { mutableStateOf(false) }
+    var deleted          by remember { mutableStateOf(false) }
+    var errorMessage     by remember { mutableStateOf<String?>(null) }
+
+    // Track assignment state locally so UI updates without re-navigating
+    var currentVehicleId     by remember { mutableStateOf(user.currentVehicleId) }
+    var currentVehicleMake   by remember { mutableStateOf(user.currentVehicleMake) }
+    var currentVehicleModel  by remember { mutableStateOf(user.currentVehicleModel) }
+    var currentVehicleColour by remember { mutableStateOf(user.currentVehicleColour) }
+    var currentVehiclePlate  by remember { mutableStateOf(user.currentVehiclePlate) }
+    var currentVehicleType   by remember { mutableStateOf(user.currentVehicleType) }
+
+    // Load active vehicles when screen opens (driver only)
+    LaunchedEffect(Unit) {
+        if (user.role.uppercase() == "DRIVER") viewModel.loadVehicles(activeOnly = true)
+    }
+
+    LaunchedEffect(assignState) {
+        when (val s = assignState) {
+            is ApiResult.Success -> {
+                currentVehicleId     = s.data.currentVehicleId
+                currentVehicleMake   = s.data.currentVehicleMake
+                currentVehicleModel  = s.data.currentVehicleModel
+                currentVehicleColour = s.data.currentVehicleColour
+                currentVehiclePlate  = s.data.currentVehiclePlate
+                currentVehicleType   = s.data.currentVehicleType
+                viewModel.resetAssignState()
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetAssignState() }
+            else -> {}
+        }
+    }
 
     val (roleTint, roleLabel, roleIcon) = when (user.role.uppercase()) {
         "DRIVER" -> Triple(KntYellow,  "Driver",        Icons.Rounded.LocalShipping)
@@ -62,6 +95,23 @@ fun AdminUserDetailScreen(
     if (deleted) {
         LaunchedEffect(Unit) { onBack() }
         return
+    }
+
+    // Vehicle picker sheet
+    if (showVehiclePicker) {
+        val vehicles = (vehiclesState as? ApiResult.Success)?.data ?: emptyList()
+        VehiclePickerSheet(
+            vehicles  = vehicles,
+            isLoading = vehiclesState is ApiResult.Loading,
+            currentId = currentVehicleId,
+            onSelect  = { vehicle ->
+                viewModel.assignVehicle(user.id, vehicle.id)
+            },
+            onUnassign = if (currentVehicleId != null) ({
+                viewModel.assignVehicle(user.id, null)
+            }) else null,
+            onDismiss = { showVehiclePicker = false },
+        )
     }
 
     if (showDialog) {
@@ -179,40 +229,41 @@ fun AdminUserDetailScreen(
 
                 if (user.role.uppercase() == "DRIVER") {
                     Spacer(Modifier.height(16.dp))
-                    SectionHeader(title = "Assigned Vehicle")
-                    if (user.currentVehicleId != null) {
+                    SectionHeader(
+                        title    = "Assigned Vehicle",
+                        action   = if (currentVehicleId != null) "Change" else "Assign",
+                        onAction = { showVehiclePicker = true },
+                    )
+
+                    val isAssigning = assignState is ApiResult.Loading
+                    if (isAssigning) {
+                        Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    } else if (currentVehicleId != null) {
                         KntCard {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
-                                        .background(c.yellow.copy(0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(22.dp))
-                                }
+                                VehiclePhotoAvatar(
+                                    photoUrl = user.currentVehiclePhotoUrl,
+                                    size     = 44.dp,
+                                    shape    = RoundedCornerShape(10.dp),
+                                )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        "${user.currentVehicleColour} ${user.currentVehicleMake} ${user.currentVehicleModel}",
+                                        "${currentVehicleColour ?: ""} ${currentVehicleMake ?: ""} ${currentVehicleModel ?: ""}".trim(),
                                         style = MaterialTheme.typography.titleSmall,
                                         color = c.textBright,
                                     )
                                     Text(
-                                        "${user.currentVehiclePlate} · ${user.currentVehicleType?.lowercase()?.replaceFirstChar { it.uppercase() }}",
+                                        "${currentVehiclePlate ?: ""} · ${currentVehicleType?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""}".trim(' ', '·', ' '),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = c.textMuted,
                                     )
                                 }
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = StatusGreen.copy(0.12f),
-                                ) {
-                                    Text(
-                                        "Assigned",
-                                        style    = MaterialTheme.typography.labelSmall,
-                                        color    = StatusGreen,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    )
+                                Surface(shape = RoundedCornerShape(8.dp), color = StatusGreen.copy(0.12f)) {
+                                    Text("Assigned", style = MaterialTheme.typography.labelSmall, color = StatusGreen,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                 }
                             }
                         }
@@ -223,14 +274,11 @@ fun AdminUserDetailScreen(
                             border   = BorderStroke(1.dp, KntOrange.copy(0.3f)),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Row(
-                                Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Text("No vehicle assigned", style = MaterialTheme.typography.bodyMedium, color = c.textMuted, modifier = Modifier.weight(1f))
-                                TextButton(onClick = onAssignVehicle) {
+                                TextButton(onClick = { showVehiclePicker = true }) {
                                     Text("Assign", style = MaterialTheme.typography.labelMedium, color = KntOrange)
                                 }
                             }
