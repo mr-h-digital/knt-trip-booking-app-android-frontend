@@ -97,7 +97,9 @@ fun DriverDashboardScreen(
                 )
             },
             topBar = {
+                val avatarSize = 72.dp
                 Box(Modifier.fillMaxWidth().wrapContentHeight()) {
+                    // Hero image
                     Box(
                         modifier = Modifier.fillMaxWidth().height(200.dp)
                             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
@@ -106,9 +108,11 @@ fun DriverDashboardScreen(
                         Box(Modifier.fillMaxSize().background(
                             Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.5f)))
                         ))
+                        // Centred greeting, nudged up to leave room for avatar
                         Column(
-                            Modifier.align(Alignment.BottomStart)
-                                .padding(start = 16.dp, bottom = 16.dp)
+                            Modifier.align(Alignment.BottomCenter)
+                                .padding(bottom = avatarSize / 2 + 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(greeting(), style = MaterialTheme.typography.bodySmall, color = KntMuted)
                             GradientText(
@@ -131,6 +135,7 @@ fun DriverDashboardScreen(
                             }
                         }
                     }
+                    // Top bar — logo + notifications only (avatar moved to bottom centre)
                     Row(
                         modifier = Modifier.fillMaxWidth().statusBarsPadding()
                             .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -158,10 +163,17 @@ fun DriverDashboardScreen(
                                 }
                             }
                         }
-                        IconButton(onClick = onProfile) {
-                            UserAvatar(name = displayName, avatarUri = SampleData.currentUser.avatarUri, size = 32.dp)
-                        }
                     }
+                    // Avatar — centred bottom overlap
+                    UserAvatar(
+                        name      = displayName,
+                        avatarUri = null,
+                        size      = avatarSize,
+                        onClick   = onProfile,
+                        modifier  = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = avatarSize / 2),
+                    )
                 }
             },
         ) { pv ->
@@ -170,7 +182,8 @@ fun DriverDashboardScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
             ) {
-                Spacer(Modifier.height(16.dp))
+                // Space for the centred avatar overlap
+                Spacer(Modifier.height(48.dp))
 
                 // ── Today's stats strip ───────────────────────────────────
                 Row(

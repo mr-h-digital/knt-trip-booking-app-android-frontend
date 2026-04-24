@@ -153,22 +153,13 @@ fun HomeScreen(
                             )
                         )
                     )
-                    // Brand accent stripes bottom-left
-                    Row(
-                        Modifier.align(Alignment.BottomStart)
-                            .padding(start = 16.dp, bottom = avatarOverlap + 10.dp)
-                            .graphicsLayer(alpha = 1f - collapseProgress)
-                    ) {
-                        Box(Modifier.width(28.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(KntYellow))
-                        Spacer(Modifier.width(5.dp))
-                        Box(Modifier.width(8.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(KntBlue))
-                    }
-                    // Greeting bottom-left (fades out on collapse)
+                    // Greeting — centred, fades out on collapse
                     Column(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 16.dp, bottom = avatarOverlap + 20.dp)
-                            .graphicsLayer(alpha = 1f - collapseProgress * 2f)
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = avatarOverlap + 16.dp)
+                            .graphicsLayer(alpha = 1f - collapseProgress * 2f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             "Good morning,",
@@ -243,7 +234,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ── Avatar — overlaps fold, bottom-right ──────────────────
+                // ── Avatar — centred bottom overlap ───────────────────────
                 val avatarSize = lerp(72.dp, 0.dp, collapseProgress)
                 if (avatarSize > 8.dp) {
                     UserAvatar(
@@ -252,9 +243,8 @@ fun HomeScreen(
                         size      = avatarSize,
                         onClick   = onProfile,
                         modifier  = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 20.dp)
-                            .offset(y = avatarOverlap / 2),
+                            .align(Alignment.BottomCenter)
+                            .offset(y = avatarSize / 2),
                     )
                 }
 
@@ -291,8 +281,8 @@ fun HomeScreen(
                 .padding(pv)
                 .verticalScroll(scrollState)
         ) {
-            // Space for the avatar that overlaps the fold
-            Spacer(Modifier.height(avatarOverlap / 2 + 8.dp))
+            // Space for the centred avatar that overlaps the fold
+            Spacer(Modifier.height(avatarOverlap + 8.dp))
 
             // ── Quick action cards ────────────────────────────────────────
             Row(

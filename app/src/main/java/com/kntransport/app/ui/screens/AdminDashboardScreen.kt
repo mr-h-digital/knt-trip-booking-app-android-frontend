@@ -79,49 +79,69 @@ fun AdminDashboardScreen(
                 .padding(pv)
                 .verticalScroll(rememberScrollState()),
         ) {
+            val adminAvatarSize = 72.dp
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                    .height(210.dp),  // extra height to allow avatar overlap
             ) {
-                HeroBgImage(resId = R.drawable.hero_bg, modifier = Modifier.fillMaxSize(), darkOverlay = 0.55f)
                 Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.5f)))
-                    )
-                )
-                Column(
-                    Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                 ) {
-                    Text(
-                        "Welcome back,",
-                        style = MaterialTheme.typography.bodySmall.copy(color = KntMuted),
+                    HeroBgImage(resId = R.drawable.hero_bg, modifier = Modifier.fillMaxSize(), darkOverlay = 0.55f)
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.5f)))
+                        )
                     )
-                    GradientText(
-                        text   = displayName,
-                        style  = MaterialTheme.typography.headlineSmall,
-                        colors = listOf(KntWhite, KntYellow),
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = KntOrange.copy(alpha = 0.20f),
+                    // Centred greeting, nudged up to leave room for avatar
+                    Column(
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(bottom = adminAvatarSize / 2 + 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Row(
-                            Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        Text(
+                            "Welcome back,",
+                            style = MaterialTheme.typography.bodySmall.copy(color = KntMuted),
+                        )
+                        GradientText(
+                            text   = displayName,
+                            style  = MaterialTheme.typography.headlineSmall,
+                            colors = listOf(KntWhite, KntYellow),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = KntOrange.copy(alpha = 0.20f),
                         ) {
-                            Icon(Icons.Rounded.AdminPanelSettings, null, tint = KntOrange, modifier = Modifier.size(13.dp))
-                            Text("Administrator", style = MaterialTheme.typography.labelSmall, color = KntOrange)
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Icon(Icons.Rounded.AdminPanelSettings, null, tint = KntOrange, modifier = Modifier.size(13.dp))
+                                Text("Administrator", style = MaterialTheme.typography.labelSmall, color = KntOrange)
+                            }
                         }
                     }
                 }
+                // Avatar — centred bottom overlap
+                UserAvatar(
+                    name      = displayName,
+                    avatarUri = null,
+                    size      = adminAvatarSize,
+                    onClick   = onProfile,
+                    modifier  = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = 0.dp),  // sits at the bottom of the 210.dp box, half over hero
+                )
             }
 
             Column(Modifier.padding(horizontal = 16.dp)) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             SectionHeader(title = "Overview")
             Spacer(Modifier.height(12.dp))
 
