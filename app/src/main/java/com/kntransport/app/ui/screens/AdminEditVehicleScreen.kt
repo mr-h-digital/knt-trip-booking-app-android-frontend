@@ -259,6 +259,15 @@ fun AdminEditVehicleScreen(
                     onClick = {
                         viewModel.updateVehicle(vehicle.id, make, model, colour,
                             plate.uppercase(), year.toInt(), selectedType, notes)
+                        if (vehiclePhotoUri != null) {
+                            val file = run {
+                                val input = context.contentResolver.openInputStream(vehiclePhotoUri!!) ?: return@run null
+                                val f = File(context.cacheDir, "vehicle_upload.jpg")
+                                java.io.FileOutputStream(f).use { out -> input.copyTo(out) }
+                                f
+                            }
+                            if (file != null) viewModel.uploadVehiclePhoto(vehicle.id, file)
+                        }
                     },
                     enabled = isValid && hasChanges && !isLoading,
                     icon    = Icons.Rounded.Check,

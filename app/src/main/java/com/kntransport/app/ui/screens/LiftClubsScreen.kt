@@ -39,7 +39,7 @@ fun LiftClubsScreen(
     val allClubs   = (clubsState as? ApiResult.Success)?.data ?: emptyList()
     // "My subscriptions" and "My requests" still use SampleData until a user-liftclub API exists
     val subscribed = allClubs.filter { it.id in SampleData.myLiftClubSubscriptions }
-    val myRequests = allClubs.filter { it.creatorId == SampleData.currentUser.id }
+    val myRequests = emptyList<LiftClubDto>() // creatorId not in LiftClubDto; requires dedicated API endpoint
 
     KntScaffold(
         title  = "Lift Clubs",

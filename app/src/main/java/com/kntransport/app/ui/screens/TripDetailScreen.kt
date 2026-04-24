@@ -336,7 +336,7 @@ fun TripDetailScreen(
             }
 
             // ── Cancelled banner ──────────────────────────────────────────
-            if (currentStatus == TripStatus.CANCELLED) {
+            if (currentStatus == "CANCELLED") {
                 Spacer(Modifier.height(16.dp))
                 Surface(
                     shape    = RoundedCornerShape(14.dp),

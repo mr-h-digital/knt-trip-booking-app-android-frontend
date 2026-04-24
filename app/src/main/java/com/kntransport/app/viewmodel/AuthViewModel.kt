@@ -40,8 +40,8 @@ class AuthViewModel : ViewModel() {
 
     /** Route based on role after successful login. */
     fun resolveDestination(role: String) = when (role.uppercase()) {
-        "DRIVER" -> "driver_home"
-        "ADMIN"  -> "admin_home"
+        "DRIVER" -> "driver_dashboard"
+        "ADMIN"  -> "admin_dashboard"
         else     -> "home"
     }
 }
