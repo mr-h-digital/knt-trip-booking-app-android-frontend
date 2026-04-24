@@ -144,8 +144,8 @@ fun UserAvatar(
     val borderColor = c.bgDeep
     val baseMod   = modifier
         .size(size)
-        .clip(CircleShape)
         .border(4.dp, borderColor, CircleShape)
+        .clip(CircleShape)
         .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
 
     Box(baseMod, contentAlignment = Alignment.Center) {
