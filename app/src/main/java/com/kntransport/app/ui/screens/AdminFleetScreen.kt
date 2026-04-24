@@ -12,25 +12,28 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.Vehicle
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminFleetScreen(
     onBack         : () -> Unit,
     onVehicleDetail: (String) -> Unit,
     onAddVehicle   : () -> Unit,
+    viewModel      : AdminViewModel = viewModel(),
 ) {
-    val c    = LocalAppColors.current
-    val tabs = listOf("Active", "All")
+    val c         = LocalAppColors.current
+    val tabs      = listOf("Active", "All")
     var selectedTab by remember { mutableIntStateOf(0) }
+    val vehiclesState by viewModel.vehicles.collectAsState()
 
-    val filtered = when (selectedTab) {
-        0    -> SampleData.vehicles.filter { it.active }
-        else -> SampleData.vehicles
+    LaunchedEffect(selectedTab) {
+        viewModel.loadVehicles(activeOnly = if (selectedTab == 0) true else null)
     }
 
     KntScaffold(
@@ -82,26 +85,43 @@ fun AdminFleetScreen(
                 }
             }
 
-            if (filtered.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when (val state = vehiclesState) {
+                is ApiResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                is ApiResult.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(52.dp))
-                        Text("No vehicles found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
-                        KntPrimaryButton(text = "Add Vehicle", onClick = onAddVehicle, icon = Icons.Rounded.Add,
-                            modifier = Modifier.fillMaxWidth(0.6f))
+                        Icon(Icons.Rounded.ErrorOutline, null, tint = c.textDim, modifier = Modifier.size(44.dp))
+                        Text(state.message, style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        KntPrimaryButton(text = "Retry", onClick = {
+                            viewModel.loadVehicles(activeOnly = if (selectedTab == 0) true else null)
+                        }, modifier = Modifier.fillMaxWidth(0.5f))
                     }
                 }
-            } else {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    filtered.forEachIndexed { idx, vehicle ->
-                        StaggeredItem(index = idx) {
-                            VehicleCard(vehicle = vehicle, onClick = { onVehicleDetail(vehicle.id) })
+                is ApiResult.Success -> {
+                    val vehicles = state.data
+                    if (vehicles.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(52.dp))
+                                Text("No vehicles found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                                KntPrimaryButton(text = "Add Vehicle", onClick = onAddVehicle, icon = Icons.Rounded.Add,
+                                    modifier = Modifier.fillMaxWidth(0.6f))
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            vehicles.forEachIndexed { idx, vehicle ->
+                                StaggeredItem(index = idx) {
+                                    VehicleDtoCard(vehicle = vehicle, onClick = { onVehicleDetail(vehicle.id) })
+                                }
+                            }
+                            Spacer(Modifier.height(32.dp))
                         }
                     }
-                    Spacer(Modifier.height(32.dp))
                 }
             }
         }
@@ -109,13 +129,8 @@ fun AdminFleetScreen(
 }
 
 @Composable
-fun VehicleCard(vehicle: Vehicle, onClick: () -> Unit) {
+fun VehicleDtoCard(vehicle: VehicleDto, onClick: () -> Unit) {
     val c = LocalAppColors.current
-    val assignedDriver = SampleData.vehicles.find { it.id == vehicle.id }
-        ?.assignedDriverId?.let { dId ->
-            adminSampleUsers.find { it.id == dId }
-        }
-
     KntCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             VehiclePhotoAvatar(
@@ -136,16 +151,16 @@ fun VehicleCard(vehicle: Vehicle, onClick: () -> Unit) {
                     color = c.textMuted,
                 )
                 Text(
-                    "${vehicle.vehicleType.name.lowercase().replaceFirstChar { it.uppercase() }} · ${vehicle.year}",
+                    "${vehicle.vehicleType.lowercase().replaceFirstChar { it.uppercase() }} · ${vehicle.year}",
                     style = MaterialTheme.typography.labelSmall,
                     color = c.textDim,
                 )
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (assignedDriver != null) {
+                if (vehicle.assignedDriverName != null) {
                     Surface(shape = RoundedCornerShape(8.dp), color = StatusGreen.copy(0.12f)) {
                         Text(
-                            assignedDriver.name.split(" ").first(),
+                            vehicle.assignedDriverName.split(" ").first(),
                             style    = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color    = StatusGreen,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),

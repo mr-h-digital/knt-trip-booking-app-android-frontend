@@ -11,42 +11,38 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.User
-import com.kntransport.app.data.UserRole
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.UserDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
-
-val adminSampleUsers = listOf(
-    User("u1",  "Tayla Hendricks",  "tayla@email.com",            "072 345 6789",   UserRole.COMMUTER),
-    User("u2",  "Nadia Adams",      "nadia@email.com",            "083 456 7890",   UserRole.COMMUTER),
-    User("u3",  "Yusuf Daniels",    "yusuf@email.com",            "071 567 8901",   UserRole.COMMUTER),
-    User("u4",  "Fatima Jacobs",    "fatima@email.com",           "082 678 9012",   UserRole.COMMUTER),
-    User("d1",  "Taswill Heynes",   "taswill@ktransport.co.za",  "+27787784182",   UserRole.DRIVER),
-    User("d2",  "Bradley September","bradley@ktransport.co.za",  "+27821234567",   UserRole.DRIVER),
-    User("a1",  "Admin User",       "admin@ktransport.co.za",    "+27211234567",   UserRole.ADMIN),
-)
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminUsersScreen(
     onBack        : () -> Unit,
     onCreateDriver: () -> Unit,
     onEditUser    : (String) -> Unit,
+    viewModel     : AdminViewModel = viewModel(),
 ) {
     val c    = LocalAppColors.current
     val tabs = listOf("All", "Commuters", "Drivers")
     var selectedTab by remember { mutableIntStateOf(0) }
+    val usersState by viewModel.users.collectAsState()
 
-    val filtered = when (selectedTab) {
-        1 -> adminSampleUsers.filter { it.role == UserRole.COMMUTER }
-        2 -> adminSampleUsers.filter { it.role == UserRole.DRIVER }
-        else -> adminSampleUsers
+    val roleFilter = when (selectedTab) {
+        1 -> "COMMUTER"
+        2 -> "DRIVER"
+        else -> null
+    }
+
+    LaunchedEffect(selectedTab) {
+        viewModel.loadUsers(role = roleFilter)
     }
 
     KntScaffold(
@@ -98,22 +94,38 @@ fun AdminUsersScreen(
                 }
             }
 
-            if (filtered.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when (val state = usersState) {
+                is ApiResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                is ApiResult.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Rounded.PeopleOutline, null, tint = c.textDim, modifier = Modifier.size(52.dp))
-                        Text("No users found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                        Icon(Icons.Rounded.ErrorOutline, null, tint = c.textDim, modifier = Modifier.size(44.dp))
+                        Text(state.message, style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        KntPrimaryButton(text = "Retry", onClick = { viewModel.loadUsers(role = roleFilter) },
+                            modifier = Modifier.fillMaxWidth(0.5f))
                     }
                 }
-            } else {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    filtered.forEach { user ->
-                        AdminUserCard(user = user, onClick = { onEditUser(user.id) })
+                is ApiResult.Success -> {
+                    val users = state.data
+                    if (users.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Rounded.PeopleOutline, null, tint = c.textDim, modifier = Modifier.size(52.dp))
+                                Text("No users found", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            users.forEach { user ->
+                                AdminUserDtoCard(user = user, onClick = { onEditUser(user.id) })
+                            }
+                            Spacer(Modifier.height(32.dp))
+                        }
                     }
-                    Spacer(Modifier.height(32.dp))
                 }
             }
         }
@@ -121,12 +133,12 @@ fun AdminUsersScreen(
 }
 
 @Composable
-private fun AdminUserCard(user: User, onClick: () -> Unit) {
-    val c      = LocalAppColors.current
-    val (tint, roleLabel) = when (user.role) {
-        UserRole.DRIVER  -> KntYellow to "Driver"
-        UserRole.ADMIN   -> KntOrange to "Admin"
-        else             -> KntBlue   to "Commuter"
+fun AdminUserDtoCard(user: UserDto, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    val (tint, roleLabel) = when (user.role.uppercase()) {
+        "DRIVER" -> KntYellow to "Driver"
+        "ADMIN"  -> KntOrange to "Admin"
+        else     -> KntBlue   to "Commuter"
     }
     val initials = user.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
 
@@ -166,4 +178,3 @@ private fun AdminUserCard(user: User, onClick: () -> Unit) {
         }
     }
 }
-

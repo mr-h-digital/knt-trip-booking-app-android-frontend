@@ -21,23 +21,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.Vehicle
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 import java.io.File
 
 private val editVehicleTypes = listOf("MINIBUS", "BUS", "SUV", "SEDAN")
 
 @Composable
 fun AdminEditVehicleScreen(
-    vehicle : Vehicle,
-    onBack  : () -> Unit,
-    onSaved : () -> Unit,
+    vehicle   : VehicleDto,
+    onBack    : () -> Unit,
+    onSaved   : () -> Unit,
+    viewModel : AdminViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
-
-    val context = LocalContext.current
+    val c           = LocalAppColors.current
+    val actionState by viewModel.vehicleActionState.collectAsState()
+    val context     = LocalContext.current
 
     var make             by remember { mutableStateOf(vehicle.make) }
     var model            by remember { mutableStateOf(vehicle.model) }
@@ -45,10 +49,31 @@ fun AdminEditVehicleScreen(
     var plate            by remember { mutableStateOf(vehicle.plate) }
     var year             by remember { mutableStateOf(vehicle.year.toString()) }
     var notes            by remember { mutableStateOf(vehicle.notes) }
-    var selectedType     by remember { mutableStateOf(vehicle.vehicleType.name) }
+    var selectedType     by remember { mutableStateOf(vehicle.vehicleType) }
     var vehiclePhotoUri  by remember { mutableStateOf<Uri?>(null) }
     var showPhotoSheet   by remember { mutableStateOf(false) }
-    var saved            by remember { mutableStateOf(false) }
+    var errorMessage     by remember { mutableStateOf<String?>(null) }
+
+    val isLoading  = actionState is ApiResult.Loading
+    val isValid    = make.isNotBlank() && model.isNotBlank() && colour.isNotBlank() &&
+                     plate.isNotBlank() && year.toIntOrNull() != null
+    val hasChanges = make != vehicle.make || model != vehicle.model ||
+                     colour != vehicle.colour || plate != vehicle.plate ||
+                     year != vehicle.year.toString() || notes != vehicle.notes ||
+                     selectedType != vehicle.vehicleType || vehiclePhotoUri != null
+
+    LaunchedEffect(actionState) {
+        when (val s = actionState) {
+            is ApiResult.Success -> { viewModel.resetVehicleActionState(); onSaved() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetVehicleActionState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
 
     val cameraUri: Uri = remember {
         val dir  = File(context.cacheDir, "camera").also { it.mkdirs() }
@@ -64,13 +89,6 @@ fun AdminEditVehicleScreen(
     val cameraPermLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) cameraLauncher.launch(cameraUri)
     }
-
-    val isValid   = make.isNotBlank() && model.isNotBlank() && colour.isNotBlank() &&
-                    plate.isNotBlank() && year.toIntOrNull() != null
-    val hasChanges = make != vehicle.make || model != vehicle.model ||
-                     colour != vehicle.colour || plate != vehicle.plate ||
-                     year != vehicle.year.toString() || notes != vehicle.notes ||
-                     selectedType != vehicle.vehicleType.name || vehiclePhotoUri != null
 
     if (showPhotoSheet) {
         PhotoPickerSheet(
@@ -88,18 +106,12 @@ fun AdminEditVehicleScreen(
         )
     }
 
-    if (saved) {
-        VehicleUpdatedSuccess(
-            make   = make,
-            model  = model,
-            colour = colour,
-            plate  = plate,
-            onDone = onSaved,
-        )
+    if (actionState is ApiResult.Success) {
+        VehicleUpdatedSuccess(make = make, model = model, colour = colour, plate = plate, onDone = onSaved)
         return
     }
 
-    KntScaffold(title = "Edit Vehicle", onBack = onBack) { pv ->
+    KntScaffold(title = "Edit Vehicle", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pv).verticalScroll(rememberScrollState()),
         ) {
@@ -119,7 +131,6 @@ fun AdminEditVehicleScreen(
             Column(Modifier.padding(horizontal = 16.dp)) {
                 Spacer(Modifier.height(20.dp))
 
-                // ── Vehicle photo picker ───────────────────────────────────
                 SectionHeader(title = "Vehicle Photo")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -244,9 +255,12 @@ fun AdminEditVehicleScreen(
                 Spacer(Modifier.height(28.dp))
 
                 KntPrimaryButton(
-                    text    = "Save Changes",
-                    onClick = { saved = true },
-                    enabled = isValid && hasChanges,
+                    text    = if (isLoading) "Saving..." else "Save Changes",
+                    onClick = {
+                        viewModel.updateVehicle(vehicle.id, make, model, colour,
+                            plate.uppercase(), year.toInt(), selectedType, notes)
+                    },
+                    enabled = isValid && hasChanges && !isLoading,
                     icon    = Icons.Rounded.Check,
                 )
                 Spacer(Modifier.height(8.dp))

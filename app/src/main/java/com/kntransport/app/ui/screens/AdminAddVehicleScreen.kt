@@ -13,18 +13,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 private val vehicleTypes = listOf("MINIBUS", "BUS", "SUV", "SEDAN")
 
 @Composable
 fun AdminAddVehicleScreen(
-    onBack  : () -> Unit,
-    onAdded : () -> Unit,
+    onBack    : () -> Unit,
+    onAdded   : () -> Unit,
+    viewModel : AdminViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c           = LocalAppColors.current
+    val actionState by viewModel.vehicleActionState.collectAsState()
 
     var make         by remember { mutableStateOf("") }
     var model        by remember { mutableStateOf("") }
@@ -33,23 +38,31 @@ fun AdminAddVehicleScreen(
     var year         by remember { mutableStateOf("") }
     var notes        by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("MINIBUS") }
-    var added        by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val isValid = make.isNotBlank() && model.isNotBlank() && colour.isNotBlank() &&
-                  plate.isNotBlank() && year.toIntOrNull() != null
+    val isValid   = make.isNotBlank() && model.isNotBlank() && colour.isNotBlank() &&
+                    plate.isNotBlank() && year.toIntOrNull() != null
+    val isLoading = actionState is ApiResult.Loading
 
-    if (added) {
-        VehicleAddedSuccess(
-            make    = make,
-            model   = model,
-            colour  = colour,
-            plate   = plate,
-            onDone  = onAdded,
-        )
+    LaunchedEffect(actionState) {
+        when (val s = actionState) {
+            is ApiResult.Success -> { viewModel.resetVehicleActionState(); onAdded() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetVehicleActionState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
+    if (actionState is ApiResult.Success) {
+        VehicleAddedSuccess(make = make, model = model, colour = colour, plate = plate, onDone = onAdded)
         return
     }
 
-    KntScaffold(title = "Add Vehicle", onBack = onBack) { pv ->
+    KntScaffold(title = "Add Vehicle", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pv).verticalScroll(rememberScrollState()),
         ) {
@@ -127,9 +140,12 @@ fun AdminAddVehicleScreen(
                 Spacer(Modifier.height(28.dp))
 
                 KntPrimaryButton(
-                    text    = "Add to Fleet",
-                    onClick = { added = true },
-                    enabled = isValid,
+                    text    = if (isLoading) "Adding..." else "Add to Fleet",
+                    onClick = {
+                        viewModel.createVehicle(make, model, colour, plate.uppercase(),
+                            year.toInt(), selectedType, notes)
+                    },
+                    enabled = isValid && !isLoading,
                     icon    = Icons.Rounded.DirectionsBus,
                 )
                 Spacer(Modifier.height(8.dp))

@@ -10,37 +10,51 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.kntransport.app.R
-import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.Vehicle
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminVehicleDetailScreen(
-    vehicle        : Vehicle,
+    vehicle        : VehicleDto,
     onBack         : () -> Unit,
     onEdit         : () -> Unit = {},
     onAssignDriver : () -> Unit = {},
+    viewModel      : AdminViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
-    var showDeactivateDialog by remember { mutableStateOf(false) }
-    var deactivated          by remember { mutableStateOf(!vehicle.active) }
+    val c               = LocalAppColors.current
+    val deactivateState by viewModel.deactivateState.collectAsState()
+    var showDialog      by remember { mutableStateOf(false) }
+    var deactivated     by remember { mutableStateOf(!vehicle.active) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
 
-    val assignedDriver = SampleData.vehicles
-        .find { it.id == vehicle.id }
-        ?.assignedDriverId
-        ?.let { dId -> adminSampleUsers.find { it.id == dId } }
+    LaunchedEffect(deactivateState) {
+        when (val s = deactivateState) {
+            is ApiResult.Success -> { deactivated = true; viewModel.resetDeactivateState() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetDeactivateState() }
+            else -> {}
+        }
+    }
 
-    if (showDeactivateDialog) {
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
+    if (showDialog) {
         AlertDialog(
-            onDismissRequest = { showDeactivateDialog = false },
+            onDismissRequest = { showDialog = false },
             containerColor   = c.surface2,
             icon = { Icon(Icons.Rounded.DirectionsBus, null, tint = StatusRed, modifier = Modifier.size(28.dp)) },
             title = { Text("Deactivate Vehicle?", style = MaterialTheme.typography.titleMedium, color = c.textBright) },
@@ -52,14 +66,14 @@ fun AdminVehicleDetailScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { deactivated = true; showDeactivateDialog = false },
+                    onClick = { showDialog = false; viewModel.deactivateVehicle(vehicle.id) },
                     colors  = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White),
                     shape   = RoundedCornerShape(10.dp),
                 ) { Text("Deactivate") }
             },
             dismissButton = {
                 OutlinedButton(
-                    onClick = { showDeactivateDialog = false },
+                    onClick = { showDialog = false },
                     shape   = RoundedCornerShape(10.dp),
                     border  = BorderStroke(1.dp, c.borderColor),
                     colors  = ButtonDefaults.outlinedButtonColors(contentColor = c.textMuted),
@@ -69,9 +83,10 @@ fun AdminVehicleDetailScreen(
     }
 
     KntScaffold(
-        title   = "Vehicle Detail",
-        onBack  = onBack,
-        actions = {
+        title        = "Vehicle Detail",
+        onBack       = onBack,
+        snackbarHost = { SnackbarHost(snackbarState) },
+        actions      = {
             IconButton(onClick = onEdit) {
                 Icon(Icons.Rounded.Edit, "Edit vehicle", tint = KntWhite)
             }
@@ -140,7 +155,7 @@ fun AdminVehicleDetailScreen(
                     InfoRow(Icons.Rounded.CalendarMonth,      "Year",         vehicle.year.toString())
                     KntDivider()
                     InfoRow(Icons.Rounded.Category,           "Type",
-                        vehicle.vehicleType.name.lowercase().replaceFirstChar { it.uppercase() })
+                        vehicle.vehicleType.lowercase().replaceFirstChar { it.uppercase() })
                     if (vehicle.notes.isNotBlank()) {
                         KntDivider()
                         InfoRow(Icons.Rounded.Notes, "Notes", vehicle.notes)
@@ -150,7 +165,7 @@ fun AdminVehicleDetailScreen(
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "Assigned Driver")
 
-                if (assignedDriver != null) {
+                if (vehicle.assignedDriverName != null) {
                     KntCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -162,8 +177,7 @@ fun AdminVehicleDetailScreen(
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(assignedDriver.name, style = MaterialTheme.typography.titleSmall, color = c.textBright)
-                                Text(assignedDriver.email, style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                                Text(vehicle.assignedDriverName, style = MaterialTheme.typography.titleSmall, color = c.textBright)
                             }
                             Surface(shape = RoundedCornerShape(8.dp), color = KntYellow.copy(0.12f)) {
                                 Text("Driver", style = MaterialTheme.typography.labelSmall, color = KntYellow,
@@ -192,9 +206,10 @@ fun AdminVehicleDetailScreen(
                 Spacer(Modifier.height(24.dp))
                 SectionHeader(title = "Actions")
 
+                val isDeactivating = deactivateState is ApiResult.Loading
                 if (!deactivated) {
                     Button(
-                        onClick  = { showDeactivateDialog = true },
+                        onClick  = { showDialog = true },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(14.dp),
                         colors   = ButtonDefaults.buttonColors(
@@ -202,25 +217,31 @@ fun AdminVehicleDetailScreen(
                             contentColor   = StatusRed,
                         ),
                         elevation = ButtonDefaults.buttonElevation(0.dp),
+                        enabled   = !isDeactivating,
                     ) {
-                        Icon(Icons.Rounded.Block, null, modifier = Modifier.size(18.dp))
+                        if (isDeactivating) {
+                            CircularProgressIndicator(color = StatusRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.Block, null, modifier = Modifier.size(18.dp))
+                        }
                         Spacer(Modifier.width(8.dp))
                         Text("Deactivate Vehicle", style = MaterialTheme.typography.labelLarge)
                     }
                 } else {
-                    Button(
-                        onClick  = { deactivated = false },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                    Surface(
                         shape    = RoundedCornerShape(14.dp),
-                        colors   = ButtonDefaults.buttonColors(
-                            containerColor = StatusGreen.copy(alpha = 0.12f),
-                            contentColor   = StatusGreen,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                        color    = c.surface2,
+                        border   = BorderStroke(1.dp, c.borderColor),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Reactivate Vehicle", style = MaterialTheme.typography.labelLarge)
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Icon(Icons.Rounded.Block, null, tint = StatusRed, modifier = Modifier.size(18.dp))
+                            Text("Vehicle is deactivated", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                        }
                     }
                 }
 

@@ -15,61 +15,82 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.User
-import com.kntransport.app.data.UserRole
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.UserDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminUserDetailScreen(
-    user          : User,
-    onBack        : () -> Unit,
-    onEdit        : () -> Unit = {},
+    user           : UserDto,
+    onBack         : () -> Unit,
+    onEdit         : () -> Unit = {},
     onAssignVehicle: () -> Unit = {},
+    viewModel      : AdminViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c            = LocalAppColors.current
+    val deleteState  by viewModel.deleteState.collectAsState()
+    var showDialog   by remember { mutableStateOf(false) }
+    var deleted      by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val (roleTint, roleLabel, roleIcon) = when (user.role) {
-        UserRole.DRIVER  -> Triple(KntYellow,  "Driver",        Icons.Rounded.LocalShipping)
-        UserRole.ADMIN   -> Triple(KntOrange,  "Administrator", Icons.Rounded.AdminPanelSettings)
-        UserRole.COMMUTER -> Triple(KntBlue,   "Commuter",      Icons.Rounded.DirectionsBus)
+    val (roleTint, roleLabel, roleIcon) = when (user.role.uppercase()) {
+        "DRIVER" -> Triple(KntYellow,  "Driver",        Icons.Rounded.LocalShipping)
+        "ADMIN"  -> Triple(KntOrange,  "Administrator", Icons.Rounded.AdminPanelSettings)
+        else     -> Triple(KntBlue,    "Commuter",      Icons.Rounded.DirectionsBus)
     }
 
     val initials = user.name.split(" ")
         .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
 
-    var showDeactivateDialog by remember { mutableStateOf(false) }
-    var deactivated          by remember { mutableStateOf(false) }
+    LaunchedEffect(deleteState) {
+        when (val s = deleteState) {
+            is ApiResult.Success -> { viewModel.resetDeleteState(); deleted = true }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetDeleteState() }
+            else -> {}
+        }
+    }
 
-    if (showDeactivateDialog) {
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
+    if (deleted) {
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
+
+    if (showDialog) {
         AlertDialog(
-            onDismissRequest = { showDeactivateDialog = false },
+            onDismissRequest = { showDialog = false },
             containerColor   = c.surface2,
             icon = {
                 Icon(Icons.Rounded.PersonOff, null, tint = StatusRed, modifier = Modifier.size(28.dp))
             },
             title = {
-                Text("Deactivate Account?", style = MaterialTheme.typography.titleMedium, color = c.textBright)
+                Text("Delete Account?", style = MaterialTheme.typography.titleMedium, color = c.textBright)
             },
             text = {
                 Text(
-                    "Are you sure you want to deactivate ${user.name}'s account? They will no longer be able to log in.",
+                    "Are you sure you want to delete ${user.name}'s account? This cannot be undone.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = c.textMuted,
                 )
             },
             confirmButton = {
                 Button(
-                    onClick = { deactivated = true; showDeactivateDialog = false },
+                    onClick = { showDialog = false; viewModel.deleteUser(user.id) },
                     colors  = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White),
                     shape   = RoundedCornerShape(10.dp),
-                ) { Text("Deactivate") }
+                ) { Text("Delete") }
             },
             dismissButton = {
                 OutlinedButton(
-                    onClick = { showDeactivateDialog = false },
+                    onClick = { showDialog = false },
                     shape   = RoundedCornerShape(10.dp),
                     border  = BorderStroke(1.dp, c.borderColor),
                     colors  = ButtonDefaults.outlinedButtonColors(contentColor = c.textMuted),
@@ -79,9 +100,10 @@ fun AdminUserDetailScreen(
     }
 
     KntScaffold(
-        title   = "User Detail",
-        onBack  = onBack,
-        actions = {
+        title        = "User Detail",
+        onBack       = onBack,
+        snackbarHost = { SnackbarHost(snackbarState) },
+        actions      = {
             IconButton(onClick = onEdit) {
                 Icon(Icons.Rounded.Edit, "Edit user", tint = KntWhite)
             }
@@ -93,7 +115,6 @@ fun AdminUserDetailScreen(
                 .padding(pv)
                 .verticalScroll(rememberScrollState()),
         ) {
-            // ── Avatar header ─────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,8 +124,8 @@ fun AdminUserDetailScreen(
             ) {
                 HeroBgImage(resId = R.drawable.hero_bg_2, modifier = Modifier.fillMaxSize(), darkOverlay = 0.62f)
                 Box(Modifier.fillMaxSize().background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(androidx.compose.ui.graphics.Color.Transparent, c.bgDeep.copy(0.7f))
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, c.bgDeep.copy(0.7f))
                     )
                 ))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -139,27 +160,12 @@ fun AdminUserDetailScreen(
                             Text(roleLabel, style = MaterialTheme.typography.labelMedium, color = roleTint)
                         }
                     }
-                    if (deactivated) {
-                        Spacer(Modifier.height(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = StatusRed.copy(alpha = 0.15f),
-                        ) {
-                            Text(
-                                "Deactivated",
-                                style    = MaterialTheme.typography.labelSmall,
-                                color    = StatusRed,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            )
-                        }
-                    }
                 }
             }
 
             Column(Modifier.padding(horizontal = 16.dp)) {
                 Spacer(Modifier.height(8.dp))
 
-                // ── Account details ───────────────────────────────────────
                 SectionHeader(title = "Account Details")
                 KntCard {
                     UserDetailRow(Icons.Rounded.Badge,  "Full Name", user.name)
@@ -171,40 +177,10 @@ fun AdminUserDetailScreen(
                     UserDetailRow(Icons.Rounded.Key,    "User ID",   user.id)
                 }
 
-                Spacer(Modifier.height(16.dp))
-
-                // ── Role-specific activity ────────────────────────────────
-                SectionHeader(title = "Activity")
-                KntCard {
-                    when (user.role) {
-                        UserRole.DRIVER -> {
-                            UserActivityRow(Icons.Rounded.DirectionsBus, "Trips Assigned", "12", c.blue)
-                            KntDivider()
-                            UserActivityRow(Icons.Rounded.CheckCircle,   "Trips Completed", "10", StatusGreen)
-                            KntDivider()
-                            UserActivityRow(Icons.Rounded.Star,          "Average Rating",  "4.3 ★", KntYellow)
-                        }
-                        UserRole.COMMUTER -> {
-                            UserActivityRow(Icons.Rounded.DirectionsBus, "Total Trips",     "8",  c.blue)
-                            KntDivider()
-                            UserActivityRow(Icons.Rounded.Groups,        "Lift Club Subs",  "2",  c.yellow)
-                            KntDivider()
-                            UserActivityRow(Icons.Rounded.CheckCircle,   "Completed Trips", "6",  StatusGreen)
-                        }
-                        UserRole.ADMIN -> {
-                            UserActivityRow(Icons.Rounded.People,              "Users Managed", "7",  c.blue)
-                            KntDivider()
-                            UserActivityRow(Icons.Rounded.AdminPanelSettings,  "Role",          "Administrator", KntOrange)
-                        }
-                    }
-                }
-
-                // ── Assigned Vehicle (drivers only) ──────────────────────
-                if (user.role == UserRole.DRIVER) {
+                if (user.role.uppercase() == "DRIVER") {
                     Spacer(Modifier.height(16.dp))
                     SectionHeader(title = "Assigned Vehicle")
-                    val vehicle = SampleData.vehicles.firstOrNull { it.assignedDriverId == user.id }
-                    if (vehicle != null) {
+                    if (user.currentVehicleId != null) {
                         KntCard {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -217,12 +193,12 @@ fun AdminUserDetailScreen(
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        "${vehicle.colour} ${vehicle.make} ${vehicle.model}",
+                                        "${user.currentVehicleColour} ${user.currentVehicleMake} ${user.currentVehicleModel}",
                                         style = MaterialTheme.typography.titleSmall,
                                         color = c.textBright,
                                     )
                                     Text(
-                                        "${vehicle.plate} · ${vehicle.year}",
+                                        "${user.currentVehiclePlate} · ${user.currentVehicleType?.lowercase()?.replaceFirstChar { it.uppercase() }}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = c.textMuted,
                                     )
@@ -263,8 +239,6 @@ fun AdminUserDetailScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
-
-                // ── Admin actions ─────────────────────────────────────────
                 SectionHeader(title = "Actions")
 
                 KntPrimaryButton(
@@ -273,37 +247,27 @@ fun AdminUserDetailScreen(
                     icon    = Icons.Rounded.Edit,
                 )
 
-                Spacer(Modifier.height(10.dp))
-
-                if (!deactivated) {
+                if (user.role.uppercase() != "ADMIN") {
+                    Spacer(Modifier.height(10.dp))
+                    val isDeleting = deleteState is ApiResult.Loading
                     Button(
-                        onClick  = { showDeactivateDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape    = RoundedCornerShape(14.dp),
-                        colors   = ButtonDefaults.buttonColors(
+                        onClick   = { showDialog = true },
+                        modifier  = Modifier.fillMaxWidth().height(52.dp),
+                        shape     = RoundedCornerShape(14.dp),
+                        colors    = ButtonDefaults.buttonColors(
                             containerColor = StatusRed.copy(alpha = 0.12f),
                             contentColor   = StatusRed,
                         ),
                         elevation = ButtonDefaults.buttonElevation(0.dp),
+                        enabled   = !isDeleting,
                     ) {
-                        Icon(Icons.Rounded.PersonOff, null, modifier = Modifier.size(18.dp))
+                        if (isDeleting) {
+                            CircularProgressIndicator(color = StatusRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.PersonOff, null, modifier = Modifier.size(18.dp))
+                        }
                         Spacer(Modifier.width(8.dp))
-                        Text("Deactivate Account", style = MaterialTheme.typography.labelLarge)
-                    }
-                } else {
-                    Button(
-                        onClick  = { deactivated = false },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape    = RoundedCornerShape(14.dp),
-                        colors   = ButtonDefaults.buttonColors(
-                            containerColor = StatusGreen.copy(alpha = 0.12f),
-                            contentColor   = StatusGreen,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(0.dp),
-                    ) {
-                        Icon(Icons.Rounded.PersonAdd, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Reactivate Account", style = MaterialTheme.typography.labelLarge)
+                        Text("Delete Account", style = MaterialTheme.typography.labelLarge)
                     }
                 }
 
@@ -323,16 +287,5 @@ private fun UserDetailRow(icon: ImageVector, label: String, value: String) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted)
             Text(value, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
         }
-    }
-}
-
-@Composable
-private fun UserActivityRow(icon: ImageVector, label: String, value: String, tint: Color) {
-    val c = LocalAppColors.current
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = c.textBright, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = tint))
     }
 }

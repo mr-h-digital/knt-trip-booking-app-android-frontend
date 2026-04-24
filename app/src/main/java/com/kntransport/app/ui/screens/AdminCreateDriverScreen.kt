@@ -15,16 +15,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.draw.clip
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
+import com.kntransport.app.network.AdminUserRequest
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminCreateDriverScreen(
     onBack   : () -> Unit,
     onCreated: () -> Unit,
+    viewModel: AdminViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c           = LocalAppColors.current
+    val actionState by viewModel.userActionState.collectAsState()
 
     var name             by remember { mutableStateOf("") }
     var email            by remember { mutableStateOf("") }
@@ -33,18 +39,32 @@ fun AdminCreateDriverScreen(
     var confirmPassword  by remember { mutableStateOf("") }
     var passwordVisible  by remember { mutableStateOf(false) }
     var confirmVisible   by remember { mutableStateOf(false) }
-    var created          by remember { mutableStateOf(false) }
+    var errorMessage     by remember { mutableStateOf<String?>(null) }
 
     val passwordsMatch = password.isNotBlank() && password == confirmPassword
     val isValid = name.isNotBlank() && isValidEmail(email) && phone.isNotBlank() &&
                   password.length >= 6 && passwordsMatch
+    val isLoading = actionState is ApiResult.Loading
 
-    if (created) {
+    LaunchedEffect(actionState) {
+        when (val s = actionState) {
+            is ApiResult.Success -> { viewModel.resetUserActionState(); onCreated() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetUserActionState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
+    if (actionState is ApiResult.Success) {
         DriverCreatedSuccess(driverName = name, onDone = onCreated)
         return
     }
 
-    KntScaffold(title = "Add Driver", onBack = onBack) { pv ->
+    KntScaffold(title = "Add Driver", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -196,9 +216,19 @@ fun AdminCreateDriverScreen(
             Spacer(Modifier.height(28.dp))
 
             KntPrimaryButton(
-                text    = "Create Driver Account",
-                onClick = { created = true },
-                enabled = isValid,
+                text    = if (isLoading) "Creating..." else "Create Driver Account",
+                onClick = {
+                    viewModel.createUser(
+                        AdminUserRequest(
+                            name     = name,
+                            email    = email,
+                            phone    = phone,
+                            password = password,
+                            role     = "DRIVER",
+                        )
+                    )
+                },
+                enabled = isValid && !isLoading,
                 icon    = Icons.Rounded.PersonAdd,
             )
             Spacer(Modifier.height(8.dp))

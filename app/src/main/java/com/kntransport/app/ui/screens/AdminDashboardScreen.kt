@@ -15,12 +15,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
+import com.kntransport.app.network.AnalyticsDto
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.AdminNavTab
 import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminDashboardScreen(
@@ -31,11 +35,17 @@ fun AdminDashboardScreen(
     onFinancials  : () -> Unit,
     onFleet       : () -> Unit = {},
     onProfile     : () -> Unit = {},
+    viewModel     : AdminViewModel = viewModel(),
 ) {
-    val c           = LocalAppColors.current
-    val user        = SampleData.currentUser
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val adminTabs   = AdminNavTab.entries.map { NavTabItem(it.label, it.icon) }
+    val c              = LocalAppColors.current
+    val user           = SampleData.currentUser
+    var selectedTab    by remember { mutableIntStateOf(0) }
+    val adminTabs      = AdminNavTab.entries.map { NavTabItem(it.label, it.icon) }
+    val analyticsState by viewModel.analytics.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadAnalytics() }
+
+    val analytics = (analyticsState as? ApiResult.Success<AnalyticsDto>)?.data
 
     KntScaffold(
         title     = "Admin Dashboard",
@@ -112,16 +122,23 @@ fun AdminDashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                AdminStatCard("24",      "Total Users",     Icons.Rounded.People,       c.blue,    Modifier.weight(1f))
-                AdminStatCard("3",       "Active Trips",    Icons.Rounded.DirectionsBus, c.yellow,  Modifier.weight(1f))
+                AdminStatCard(analytics?.totalUsers?.toString() ?: "—",  "Total Users",    Icons.Rounded.People,        c.blue,      Modifier.weight(1f))
+                AdminStatCard(analytics?.confirmedTrips?.toString() ?: "—", "Active Trips", Icons.Rounded.DirectionsBus, c.yellow,    Modifier.weight(1f))
             }
             Spacer(Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                AdminStatCard("5",        "Pending Quotes",  Icons.Rounded.RequestQuote, KntOrange,     Modifier.weight(1f))
-                AdminStatCard("R12,450",  "Total Revenue",   Icons.Rounded.Payments,     StatusGreen,   Modifier.weight(1f), isMonetary = true)
+                AdminStatCard(analytics?.pendingQuoteTrips?.toString() ?: "—", "Pending Quotes", Icons.Rounded.RequestQuote, KntOrange,   Modifier.weight(1f))
+                AdminStatCard(
+                    value      = analytics?.let { "R${String.format("%.0f", it.totalRevenue)}" } ?: "—",
+                    label      = "Total Revenue",
+                    icon       = Icons.Rounded.Payments,
+                    tint       = StatusGreen,
+                    modifier   = Modifier.weight(1f),
+                    isMonetary = true,
+                )
             }
             Spacer(Modifier.height(10.dp))
             Row(
@@ -129,15 +146,15 @@ fun AdminDashboardScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 AdminStatCard(
-                    value    = SampleData.vehicles.size.toString(),
-                    label    = "Fleet Size",
-                    icon     = Icons.Rounded.DirectionsBus,
+                    value    = analytics?.totalLiftClubs?.toString() ?: "—",
+                    label    = "Lift Clubs",
+                    icon     = Icons.Rounded.Groups,
                     tint     = KntBlueBright,
                     modifier = Modifier.weight(1f),
                 )
                 AdminStatCard(
-                    value    = SampleData.vehicles.count { it.assignedDriverId != null }.toString(),
-                    label    = "Assigned",
+                    value    = analytics?.totalDrivers?.toString() ?: "—",
+                    label    = "Drivers",
                     icon     = Icons.Rounded.Person,
                     tint     = c.yellow,
                     modifier = Modifier.weight(1f),
