@@ -20,17 +20,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun SignUpScreen(
     onSignedUp: () -> Unit,
     onLogin   : () -> Unit,
+    viewModel : AuthViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c           = LocalAppColors.current
+    val signUpState by viewModel.signUpState.collectAsState()
 
     var fullName         by remember { mutableStateOf("") }
     var email            by remember { mutableStateOf("") }
@@ -39,18 +44,37 @@ fun SignUpScreen(
     var confirmPassword  by remember { mutableStateOf("") }
     var passwordVisible  by remember { mutableStateOf(false) }
     var confirmVisible   by remember { mutableStateOf(false) }
+    var errorMessage     by remember { mutableStateOf<String?>(null) }
     var headerVisible    by remember { mutableStateOf(false) }
     var formVisible      by remember { mutableStateOf(false) }
 
+    val isLoading      = signUpState is ApiResult.Loading
     val passwordsMatch = confirmPassword.isEmpty() || password == confirmPassword
+
+    LaunchedEffect(signUpState) {
+        when (val s = signUpState) {
+            is ApiResult.Success -> { viewModel.resetSignUpState(); onSignedUp() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetSignUpState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
 
     LaunchedEffect(Unit) {
         delay(80);  headerVisible = true
         delay(220); formVisible   = true
     }
 
+    Scaffold(
+        containerColor = Color.Transparent,
+        snackbarHost   = { SnackbarHost(snackbarState) },
+    ) { scaffoldPadding ->
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
         contentAlignment = Alignment.TopCenter,
     ) {
         // Hero photo full-bleed
@@ -276,9 +300,17 @@ fun SignUpScreen(
                     // Register button
                     val canSubmit = fullName.isNotBlank() && email.isNotBlank() && phone.isNotBlank()
                         && password.isNotBlank() && passwordsMatch && confirmPassword.isNotBlank()
+                        && !isLoading
 
                     Button(
-                        onClick  = onSignedUp,
+                        onClick  = {
+                            viewModel.register(
+                                fullName.trim(),
+                                email.trim(),
+                                phone.trim(),
+                                password,
+                            )
+                        },
                         enabled  = canSubmit,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape    = RoundedCornerShape(14.dp),
@@ -290,15 +322,23 @@ fun SignUpScreen(
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                     ) {
-                        Icon(Icons.Rounded.HowToReg, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Create Account",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontSize   = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color       = Color.White,
+                                modifier    = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(Icons.Rounded.HowToReg, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Create Account",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontSize   = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(20.dp))
@@ -340,4 +380,5 @@ fun SignUpScreen(
             }
         }
     }
+    } // Scaffold
 }

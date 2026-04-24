@@ -106,8 +106,13 @@ fun KntNavHost(
 
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLogin         = {
-                    navController.navigate(Routes.HOME) {
+                onLogin = { role ->
+                    val dest = when (role.uppercase()) {
+                        "ADMIN"  -> Routes.ADMIN_DASHBOARD
+                        "DRIVER" -> Routes.DRIVER_DASHBOARD
+                        else     -> Routes.HOME
+                    }
+                    navController.navigate(dest) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },

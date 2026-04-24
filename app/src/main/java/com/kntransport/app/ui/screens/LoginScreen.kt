@@ -19,27 +19,55 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.UserRole
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
-    onLogin          : () -> Unit,
+    onLogin          : (role: String) -> Unit,
     onSignUp         : () -> Unit,
     onForgotPassword : () -> Unit = {},
     onDemoLogin      : (UserRole) -> Unit = {},
+    viewModel        : AuthViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c          = LocalAppColors.current
+    val loginState by viewModel.loginState.collectAsState()
 
     var email           by remember { mutableStateOf("") }
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
     var headerVisible   by remember { mutableStateOf(false) }
     var formVisible     by remember { mutableStateOf(false) }
     var footerVisible   by remember { mutableStateOf(false) }
+
+    val isLoading = loginState is ApiResult.Loading
+    val isValid   = email.isNotBlank() && password.isNotBlank()
+
+    LaunchedEffect(loginState) {
+        when (val s = loginState) {
+            is ApiResult.Success -> {
+                viewModel.resetLoginState()
+                onLogin(s.data.role)
+            }
+            is ApiResult.Error -> {
+                errorMessage = s.message
+                viewModel.resetLoginState()
+            }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
 
     LaunchedEffect(Unit) {
         delay(80);  headerVisible = true
@@ -47,8 +75,12 @@ fun LoginScreen(
         delay(200); footerVisible = true
     }
 
+    Scaffold(
+        containerColor = Color.Transparent,
+        snackbarHost   = { SnackbarHost(snackbarState) },
+    ) { scaffoldPadding ->
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
         contentAlignment = Alignment.TopCenter,
     ) {
         // Hero photo full-bleed
@@ -184,21 +216,30 @@ fun LoginScreen(
 
                     // Sign in button
                     Button(
-                        onClick  = onLogin,
+                        onClick  = { viewModel.login(email.trim(), password) },
+                        enabled  = isValid && !isLoading,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape    = RoundedCornerShape(14.dp),
                         colors   = ButtonDefaults.buttonColors(containerColor = c.blue, contentColor = Color.White),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                     ) {
-                        Text(
-                            "Sign In",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontSize   = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color       = Color.White,
+                                modifier    = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text(
+                                "Sign In",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontSize   = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
+                        }
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -316,6 +357,7 @@ fun LoginScreen(
             }
         }
     }
+    } // Scaffold
 }
 
 @Composable
