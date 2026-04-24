@@ -33,16 +33,24 @@ fun AdminVehicleDetailScreen(
     onAssignDriver : () -> Unit = {},
     viewModel      : AdminViewModel = viewModel(),
 ) {
-    val c               = LocalAppColors.current
-    val deactivateState by viewModel.deactivateState.collectAsState()
-    var showDialog      by remember { mutableStateOf(false) }
-    var deactivated     by remember { mutableStateOf(!vehicle.active) }
-    var errorMessage    by remember { mutableStateOf<String?>(null) }
+    val c                = LocalAppColors.current
+    val deactivateState  by viewModel.deactivateState.collectAsState()
+    val reactivateState  by viewModel.reactivateState.collectAsState()
+    var showDialog       by remember { mutableStateOf(false) }
+    var deactivated      by remember { mutableStateOf(!vehicle.active) }
+    var errorMessage     by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(deactivateState) {
         when (val s = deactivateState) {
-            is ApiResult.Success -> { deactivated = true; viewModel.resetDeactivateState() }
+            is ApiResult.Success -> { deactivated = true;  viewModel.resetDeactivateState() }
             is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetDeactivateState() }
+            else -> {}
+        }
+    }
+    LaunchedEffect(reactivateState) {
+        when (val s = reactivateState) {
+            is ApiResult.Success -> { deactivated = false; viewModel.resetReactivateState() }
+            is ApiResult.Error   -> { errorMessage = s.message; viewModel.resetReactivateState() }
             else -> {}
         }
     }
@@ -228,20 +236,25 @@ fun AdminVehicleDetailScreen(
                         Text("Deactivate Vehicle", style = MaterialTheme.typography.labelLarge)
                     }
                 } else {
-                    Surface(
+                    val isReactivating = reactivateState is ApiResult.Loading
+                    Button(
+                        onClick  = { viewModel.reactivateVehicle(vehicle.id) },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(14.dp),
-                        color    = c.surface2,
-                        border   = BorderStroke(1.dp, c.borderColor),
-                        modifier = Modifier.fillMaxWidth(),
+                        colors   = ButtonDefaults.buttonColors(
+                            containerColor = StatusGreen.copy(alpha = 0.12f),
+                            contentColor   = StatusGreen,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(0.dp),
+                        enabled   = !isReactivating,
                     ) {
-                        Row(
-                            Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Icon(Icons.Rounded.Block, null, tint = StatusRed, modifier = Modifier.size(18.dp))
-                            Text("Vehicle is deactivated", style = MaterialTheme.typography.bodyMedium, color = c.textMuted)
+                        if (isReactivating) {
+                            CircularProgressIndicator(color = StatusGreen, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
                         }
+                        Spacer(Modifier.width(8.dp))
+                        Text("Reactivate Vehicle", style = MaterialTheme.typography.labelLarge)
                     }
                 }
 

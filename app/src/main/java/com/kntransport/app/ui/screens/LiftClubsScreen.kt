@@ -13,24 +13,33 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.LiftClubDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.LiftClubViewModel
 
 @Composable
 fun LiftClubsScreen(
     onBack      : () -> Unit,
     onClubDetail: (String) -> Unit,
     onCreateClub: () -> Unit,
+    viewModel   : LiftClubViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
-    val tabs = listOf("Browse", "My Subscriptions", "My Requests")
+    val c          = LocalAppColors.current
+    val clubsState by viewModel.clubs.collectAsState()
+    val tabs       = listOf("Browse", "My Subscriptions", "My Requests")
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    val browseable    = SampleData.liftClubs
-    val subscribed    = SampleData.liftClubs.filter { it.id in SampleData.myLiftClubSubscriptions }
-    val myRequests    = SampleData.liftClubs.filter { it.creatorId == "u1" }
+    LaunchedEffect(Unit) { viewModel.loadLiftClubs() }
+
+    val allClubs   = (clubsState as? ApiResult.Success)?.data ?: emptyList()
+    // "My subscriptions" and "My requests" still use SampleData until a user-liftclub API exists
+    val subscribed = allClubs.filter { it.id in SampleData.myLiftClubSubscriptions }
+    val myRequests = allClubs.filter { it.creatorId == SampleData.currentUser.id }
 
     KntScaffold(
         title  = "Lift Clubs",
@@ -81,10 +90,18 @@ fun LiftClubsScreen(
             val list = when (selectedTab) {
                 1    -> subscribed
                 2    -> myRequests
-                else -> browseable
+                else -> allClubs
             }
 
-            if (list.isEmpty()) {
+            if (clubsState is ApiResult.Loading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (clubsState is ApiResult.Error) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ErrorState(message = (clubsState as ApiResult.Error).message, onRetry = { viewModel.loadLiftClubs() })
+                }
+            } else if (list.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -117,7 +134,7 @@ fun LiftClubsScreen(
 
                     list.forEachIndexed { idx, club ->
                         StaggeredItem(index = idx) {
-                            LiftClubCard(
+                            LiftClubDtoCard(
                                 club         = club,
                                 isSubscribed = club.id in SampleData.myLiftClubSubscriptions,
                                 onClick      = { onClubDetail(club.id) },
@@ -128,6 +145,70 @@ fun LiftClubsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun LiftClubDtoCard(club: LiftClubDto, isSubscribed: Boolean, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    KntCard(onClick = onClick) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(c.yellow.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Groups, null, tint = c.yellow, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(club.title, style = MaterialTheme.typography.titleSmall, color = c.textBright,
+                        modifier = Modifier.weight(1f), maxLines = 1)
+                    LiftClubStatusDtoChip(club.status)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(club.description, style = MaterialTheme.typography.bodySmall, color = c.textMuted, maxLines = 2)
+            }
+        }
+        KntDivider()
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            LiftClubMeta(Icons.Rounded.Schedule, club.departureTime, c.blue)
+            LiftClubMeta(Icons.Rounded.People, "${club.subscriberCount}/${club.maxPassengers}", c.textMuted)
+            LiftClubMeta(Icons.Rounded.CalendarViewWeek, club.daysOfWeek.joinToString(", "), c.textMuted)
+        }
+        if (club.quotedAmount != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Payments, null, tint = c.yellow, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("R${String.format("%.2f", club.quotedAmount)} ${club.paymentCycle?.lowercase() ?: ""}",
+                    style = MaterialTheme.typography.labelMedium, color = c.yellow)
+            }
+        }
+        if (isSubscribed) {
+            Spacer(Modifier.height(8.dp))
+            Surface(shape = RoundedCornerShape(8.dp), color = StatusGreen.copy(alpha = 0.12f)) {
+                Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = StatusGreen, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("You're subscribed", style = MaterialTheme.typography.labelSmall, color = StatusGreen)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LiftClubStatusDtoChip(status: String) {
+    val (label, bg, fg) = when (status.uppercase()) {
+        "OPEN"       -> Triple("Open",       androidx.compose.ui.graphics.Color(0xFF0D3A1A), StatusGreen)
+        "QUOTA_MET"  -> Triple("Quota Met",  androidx.compose.ui.graphics.Color(0xFF3A2A00), KntYellow)
+        "QUOTE_SENT" -> Triple("Quote Sent", androidx.compose.ui.graphics.Color(0xFF3A2800), KntOrange)
+        "ACTIVE"     -> Triple("Active",     androidx.compose.ui.graphics.Color(0xFF0D2040), KntBlueBright)
+        "COMPLETED"  -> Triple("Completed",  androidx.compose.ui.graphics.Color(0xFF1A2A1A), androidx.compose.ui.graphics.Color(0xFF7BC47B))
+        else         -> Triple("Cancelled",  androidx.compose.ui.graphics.Color(0xFF3A1A1A), StatusRed)
+    }
+    Surface(shape = RoundedCornerShape(20.dp), color = bg) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = fg,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
     }
 }
 

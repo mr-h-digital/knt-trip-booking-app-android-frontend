@@ -20,22 +20,59 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.SampleData
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.UserViewModel
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditProfileScreen(onBack: () -> Unit, onSaved: () -> Unit) {
-    val c       = LocalAppColors.current
-    val context = LocalContext.current
-    val user    = SampleData.currentUser
+fun EditProfileScreen(
+    onBack    : () -> Unit,
+    onSaved   : () -> Unit,
+    viewModel : UserViewModel = viewModel(),
+) {
+    val c           = LocalAppColors.current
+    val context     = LocalContext.current
+    val user        = SampleData.currentUser
+    val updateState by viewModel.updateState.collectAsState()
 
     var name  by remember { mutableStateOf(user.name) }
     var email by remember { mutableStateOf(user.email) }
     var phone by remember { mutableStateOf(user.phone) }
     var pendingAvatarUri by remember { mutableStateOf(user.avatarUri) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val isLoading = updateState is ApiResult.Loading
+
+    LaunchedEffect(updateState) {
+        when (val s = updateState) {
+            is ApiResult.Success -> {
+                // Persist name locally so other screens see it instantly
+                SampleData.currentUser = SampleData.currentUser.copy(
+                    name      = s.data.name,
+                    email     = s.data.email,
+                    phone     = s.data.phone,
+                    avatarUri = pendingAvatarUri,
+                )
+                viewModel.resetUpdateState()
+                onSaved()
+            }
+            is ApiResult.Error -> {
+                errorMessage = s.message
+                viewModel.resetUpdateState()
+            }
+            else -> {}
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarHostState.showSnackbar(it); errorMessage = null }
+    }
 
     var showDiscardDialog    by remember { mutableStateOf(false) }
     var showPhotoSheet       by remember { mutableStateOf(false) }
@@ -64,18 +101,16 @@ fun EditProfileScreen(onBack: () -> Unit, onSaved: () -> Unit) {
 
     val isDirty = name != user.name || email != user.email
         || phone != user.phone || pendingAvatarUri != user.avatarUri
-    val canSave = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank()
+    val canSave = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && !isLoading
 
     val handleBack = { if (isDirty) showDiscardDialog = true else onBack() }
 
     val doSave = {
-        SampleData.currentUser = SampleData.currentUser.copy(
-            name      = name.trim(),
-            email     = email.trim(),
-            phone     = phone.trim(),
-            avatarUri = pendingAvatarUri,
-        )
-        onSaved()
+        if (pendingAvatarUri != null && pendingAvatarUri != user.avatarUri) {
+            viewModel.uploadAvatar(context, pendingAvatarUri!!)
+        } else {
+            viewModel.updateProfile(name.trim(), email.trim(), phone.trim())
+        }
     }
 
     // ── Discard dialog ────────────────────────────────────────────────────────
@@ -120,9 +155,17 @@ fun EditProfileScreen(onBack: () -> Unit, onSaved: () -> Unit) {
     }
 
     KntScaffold(
-        title  = "Edit Profile",
-        onBack = handleBack,
+        title        = "Edit Profile",
+        onBack       = handleBack,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         actions = {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier  = Modifier.size(20.dp).padding(end = 8.dp),
+                    strokeWidth = 2.dp,
+                    color     = c.yellow,
+                )
+            }
             TextButton(onClick = doSave, enabled = canSave && isDirty) {
                 Text(
                     "Save",

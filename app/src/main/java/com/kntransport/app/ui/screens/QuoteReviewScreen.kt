@@ -10,30 +10,52 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.TripViewModel
 
 @Composable
 fun QuoteReviewScreen(
-    quoteId: String,
-    type   : String,
-    onBack : () -> Unit,
-    onDone : () -> Unit,
+    quoteId  : String,
+    type     : String,
+    onBack   : () -> Unit,
+    onDone   : () -> Unit,
+    viewModel: TripViewModel = viewModel(),
 ) {
-    val c = LocalAppColors.current
+    val c          = LocalAppColors.current
+    val quoteState by viewModel.quoteState.collectAsState()
 
-    // Resolve the item being quoted
-    val isTrip  = type == "TRIP"
-    val trip    = if (isTrip) SampleData.myTrips.firstOrNull { it.id == quoteId } else null
-    val club    = if (!isTrip) SampleData.liftClubs.firstOrNull { it.id == quoteId } else null
+    val isTrip = type == "TRIP"
+    // Amounts shown from SampleData while we still use it for the trip/club detail
+    val trip   = if (isTrip) SampleData.myTrips.firstOrNull { it.id == quoteId } else null
+    val club   = if (!isTrip) SampleData.liftClubs.firstOrNull { it.id == quoteId } else null
+    val amount = trip?.quotedAmount ?: club?.quotedAmount ?: 0.0
 
-    val amount       = trip?.quotedAmount ?: club?.quotedAmount ?: 0.0
-    val isMissing    = trip == null && club == null
-
-    var selectedCycle  by remember { mutableStateOf(PaymentCycle.MONTHLY) }
-    var accepted       by remember { mutableStateOf<Boolean?>(null) }
+    var selectedCycle     by remember { mutableStateOf(PaymentCycle.MONTHLY) }
+    var localDecision     by remember { mutableStateOf<Boolean?>(null) }
     var showDeclineDialog by remember { mutableStateOf(false) }
+    var errorMessage      by remember { mutableStateOf<String?>(null) }
+
+    val isLoading = quoteState is ApiResult.Loading
+
+    LaunchedEffect(quoteState) {
+        when (val s = quoteState) {
+            is ApiResult.Success -> {
+                viewModel.resetQuoteState()
+                // Navigate to result screen based on localDecision
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetQuoteState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
 
     if (showDeclineDialog) {
         AlertDialog(
@@ -44,8 +66,11 @@ fun QuoteReviewScreen(
             title = { Text("Decline Quote?") },
             text  = { Text("Declining this quote will cancel the booking. K&T Transport will be notified.") },
             confirmButton = {
-                Button(onClick = { accepted = false; showDeclineDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed)) {
+                Button(onClick = {
+                    showDeclineDialog = false
+                    localDecision = false
+                    viewModel.respondToQuote(quoteId, accepted = false)
+                }, colors = ButtonDefaults.buttonColors(containerColor = StatusRed)) {
                     Text("Decline")
                 }
             },
@@ -55,18 +80,22 @@ fun QuoteReviewScreen(
         )
     }
 
-    KntScaffold(title = "Review Quote", onBack = onBack) { pv ->
-        if (isMissing) {
-            Box(Modifier.fillMaxSize().padding(pv), Alignment.Center) {
-                Text("Quote not found", color = c.textMuted)
+    // Show result screens once API responds (or immediately if already decided)
+    val showResult = quoteState is ApiResult.Success || (localDecision != null && quoteState == null)
+
+    KntScaffold(title = "Review Quote", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
+        if (showResult) {
+            when (localDecision) {
+                true  -> QuoteAcceptedScreen(onDone = onDone)
+                false -> QuoteDeclinedScreen(onDone = onDone)
+                null  -> QuoteAcceptedScreen(onDone = onDone)
             }
             return@KntScaffold
         }
 
-        // Accepted / declined result screen
-        when (accepted) {
-            true -> QuoteAcceptedScreen(onDone = onDone)
-            false -> QuoteDeclinedScreen(onDone = onDone)
+        when (localDecision) {
+            true -> { QuoteAcceptedScreen(onDone = onDone); return@KntScaffold }
+            false -> { QuoteDeclinedScreen(onDone = onDone); return@KntScaffold }
             null -> Column(
                 Modifier.fillMaxSize().padding(pv).verticalScroll(rememberScrollState()).padding(16.dp)
             ) {
@@ -155,8 +184,16 @@ fun QuoteReviewScreen(
 
                 // Accept / Decline
                 KntPrimaryButton(
-                    text    = "Accept Quote — R${String.format("%.2f", amount)}",
-                    onClick = { accepted = true },
+                    text    = if (isLoading) "Processing…" else "Accept Quote — R${String.format("%.2f", amount)}",
+                    onClick = {
+                        localDecision = true
+                        viewModel.respondToQuote(
+                            quoteId,
+                            accepted     = true,
+                            paymentCycle = if (!isTrip) selectedCycle.name else null,
+                        )
+                    },
+                    enabled = !isLoading,
                     icon    = Icons.Rounded.CheckCircle,
                 )
                 Spacer(Modifier.height(10.dp))
@@ -173,9 +210,9 @@ fun QuoteReviewScreen(
                 }
 
                 Spacer(Modifier.height(32.dp))
-            }
-        }
-    }
+            } // null branch Column
+        } // when(localDecision)
+    } // KntScaffold
 }
 
 @Composable

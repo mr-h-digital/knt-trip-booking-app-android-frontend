@@ -16,19 +16,36 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.TripViewModel
 
 @Composable
-fun RateTripScreen(tripId: String, onDone: () -> Unit) {
-    val c    = LocalAppColors.current
+fun RateTripScreen(
+    tripId    : String,
+    onDone    : () -> Unit,
+    viewModel : TripViewModel = viewModel(),
+) {
+    val c         = LocalAppColors.current
+    val rateState by viewModel.rateState.collectAsState()
+    // Still use SampleData for driver name display only
     val trip = SampleData.myTrips.firstOrNull { it.id == tripId }
 
-    var rating       by remember { mutableIntStateOf(0) }
-    var hoveredStar  by remember { mutableIntStateOf(0) }
-    var comment      by remember { mutableStateOf("") }
-    var submitted    by remember { mutableStateOf(false) }
+    var rating      by remember { mutableIntStateOf(0) }
+    var hoveredStar by remember { mutableIntStateOf(0) }
+    var comment     by remember { mutableStateOf("") }
+    var submitted   by remember { mutableStateOf(false) }
+
+    LaunchedEffect(rateState) {
+        when (rateState) {
+            is ApiResult.Success -> { submitted = true; viewModel.resetRateState() }
+            is ApiResult.Error   -> viewModel.resetRateState()
+            else -> {}
+        }
+    }
 
     val ratingLabel = when (rating) {
         1 -> "Poor"
@@ -220,7 +237,7 @@ fun RateTripScreen(tripId: String, onDone: () -> Unit) {
                 // ── Submit ─────────────────────────────────────────────────
                 Column(Modifier.padding(horizontal = 24.dp).fillMaxWidth()) {
                     Button(
-                        onClick  = { if (rating > 0) submitted = true },
+                        onClick  = { if (rating > 0) viewModel.rateTrip(tripId, rating, comment) },
                         enabled  = rating > 0,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape    = RoundedCornerShape(14.dp),

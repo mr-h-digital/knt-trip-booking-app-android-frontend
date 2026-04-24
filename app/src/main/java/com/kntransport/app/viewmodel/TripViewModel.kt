@@ -3,6 +3,7 @@ package com.kntransport.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.repository.TripRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +17,20 @@ class TripViewModel : ViewModel() {
     private val _trips = MutableStateFlow<ApiResult<List<TripBookingDto>>>(ApiResult.Loading)
     val trips: StateFlow<ApiResult<List<TripBookingDto>>> = _trips
 
+    private val _selectedTrip = MutableStateFlow<ApiResult<TripBookingDto>?>(null)
+    val selectedTrip: StateFlow<ApiResult<TripBookingDto>?> = _selectedTrip
+
     private val _createState = MutableStateFlow<ApiResult<TripBookingDto>?>(null)
     val createState: StateFlow<ApiResult<TripBookingDto>?> = _createState
+
+    private val _cancelState = MutableStateFlow<ApiResult<TripBookingDto>?>(null)
+    val cancelState: StateFlow<ApiResult<TripBookingDto>?> = _cancelState
+
+    private val _rateState = MutableStateFlow<ApiResult<Unit>?>(null)
+    val rateState: StateFlow<ApiResult<Unit>?> = _rateState
+
+    private val _quoteState = MutableStateFlow<ApiResult<QuoteDto>?>(null)
+    val quoteState: StateFlow<ApiResult<QuoteDto>?> = _quoteState
 
     fun loadTrips() {
         viewModelScope.launch {
@@ -45,5 +58,36 @@ class TripViewModel : ViewModel() {
         }
     }
 
+    fun loadTrip(id: String) {
+        viewModelScope.launch {
+            _selectedTrip.value = ApiResult.Loading
+            _selectedTrip.value = repo.getTrip(id)
+        }
+    }
+
+    fun cancelTrip(id: String, reason: String, note: String = "") {
+        viewModelScope.launch {
+            _cancelState.value = ApiResult.Loading
+            _cancelState.value = repo.cancelTrip(id, reason, note)
+        }
+    }
+
+    fun rateTrip(id: String, rating: Int, comment: String = "") {
+        viewModelScope.launch {
+            _rateState.value = ApiResult.Loading
+            _rateState.value = repo.rateTrip(id, rating, comment)
+        }
+    }
+
+    fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null) {
+        viewModelScope.launch {
+            _quoteState.value = ApiResult.Loading
+            _quoteState.value = repo.respondToQuote(id, accepted, paymentCycle)
+        }
+    }
+
     fun resetCreateState() { _createState.value = null }
+    fun resetCancelState() { _cancelState.value = null }
+    fun resetRateState()   { _rateState.value   = null }
+    fun resetQuoteState()  { _quoteState.value  = null }
 }

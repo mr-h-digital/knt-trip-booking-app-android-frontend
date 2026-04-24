@@ -17,7 +17,11 @@ import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.viewmodel.TripViewModel
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookTripScreen(
     onBack     : () -> Unit,
@@ -29,14 +33,65 @@ fun BookTripScreen(
 
     var pickup     by remember { mutableStateOf("") }
     var dropoff    by remember { mutableStateOf("") }
-    var date       by remember { mutableStateOf("") }
-    var time       by remember { mutableStateOf("") }
     var passengers by remember { mutableIntStateOf(1) }
     var notes      by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Date picker state
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+    val selectedDate: LocalDate? = datePickerState.selectedDateMillis?.let {
+        java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+    }
+    val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("d MMM yyyy")) ?: ""
+    val dateApiStr  = selectedDate?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: ""
+
+    // Time picker state
+    var showTimePicker by remember { mutableStateOf(false) }
+    val timePickerState = rememberTimePickerState(is24Hour = true)
+    var timeConfirmed by remember { mutableStateOf(false) }
+    val selectedTime = if (timeConfirmed)
+        LocalTime.of(timePickerState.hour, timePickerState.minute) else null
+    val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: ""
+    val timeApiStr  = timeDisplay
+
     val isLoading = createState is ApiResult.Loading
-    val isValid   = pickup.isNotBlank() && dropoff.isNotBlank() && date.isNotBlank() && time.isNotBlank()
+    val isValid   = pickup.isNotBlank() && dropoff.isNotBlank() && selectedDate != null && selectedTime != null
+
+    // Date picker dialog
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // Time picker dialog
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            containerColor   = c.surface1,
+            title = { Text("Select Time", style = MaterialTheme.typography.titleMedium, color = c.textBright) },
+            text  = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { timeConfirmed = true; showTimePicker = false }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            },
+        )
+    }
 
     LaunchedEffect(createState) {
         when (val s = createState) {
@@ -119,16 +174,20 @@ fun BookTripScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 KntTextField(
-                    value = date, onValueChange = { date = it },
-                    label = "Date (e.g. 25 Apr)",
-                    leadingIcon = Icons.Rounded.CalendarMonth,
-                    modifier = Modifier.weight(1f),
+                    value         = dateDisplay,
+                    onValueChange = {},
+                    label         = "Date",
+                    leadingIcon   = Icons.Rounded.CalendarMonth,
+                    readOnly      = true,
+                    modifier      = Modifier.weight(1f).clickable { showDatePicker = true },
                 )
                 KntTextField(
-                    value = time, onValueChange = { time = it },
-                    label = "Time (e.g. 07:30)",
-                    leadingIcon = Icons.Rounded.Schedule,
-                    modifier = Modifier.weight(1f),
+                    value         = timeDisplay,
+                    onValueChange = {},
+                    label         = "Time",
+                    leadingIcon   = Icons.Rounded.Schedule,
+                    readOnly      = true,
+                    modifier      = Modifier.weight(1f).clickable { showTimePicker = true },
                 )
             }
 
@@ -179,7 +238,7 @@ fun BookTripScreen(
 
             KntPrimaryButton(
                 text    = "Submit Trip Request",
-                onClick = { viewModel.createTrip(pickup, dropoff, date, time, passengers, notes) },
+                onClick = { viewModel.createTrip(pickup, dropoff, dateApiStr, timeApiStr, passengers, notes) },
                 enabled = isValid,
                 icon    = Icons.Rounded.Send,
             )

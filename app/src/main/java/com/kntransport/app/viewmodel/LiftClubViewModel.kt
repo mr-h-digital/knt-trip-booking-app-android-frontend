@@ -13,6 +13,51 @@ class LiftClubViewModel : ViewModel() {
 
     private val repo by lazy { LiftClubRepository() }
 
+    // ── List ──────────────────────────────────────────────────────────────────
+
+    private val _clubs = MutableStateFlow<ApiResult<List<LiftClubDto>>>(ApiResult.Loading)
+    val clubs: StateFlow<ApiResult<List<LiftClubDto>>> = _clubs
+
+    fun loadLiftClubs() {
+        viewModelScope.launch {
+            _clubs.value = ApiResult.Loading
+            val result = repo.getLiftClubs()
+            _clubs.value = when (result) {
+                is ApiResult.Success -> ApiResult.Success(result.data.content)
+                is ApiResult.Error   -> result
+                ApiResult.Loading    -> ApiResult.Loading
+            }
+        }
+    }
+
+    // ── Detail ────────────────────────────────────────────────────────────────
+
+    private val _selectedClub = MutableStateFlow<ApiResult<LiftClubDto>?>(null)
+    val selectedClub: StateFlow<ApiResult<LiftClubDto>?> = _selectedClub
+
+    fun loadLiftClub(id: String) {
+        viewModelScope.launch {
+            _selectedClub.value = ApiResult.Loading
+            _selectedClub.value = repo.getLiftClub(id)
+        }
+    }
+
+    // ── Subscribe ─────────────────────────────────────────────────────────────
+
+    private val _subscribeState = MutableStateFlow<ApiResult<Unit>?>(null)
+    val subscribeState: StateFlow<ApiResult<Unit>?> = _subscribeState
+
+    fun subscribe(id: String) {
+        viewModelScope.launch {
+            _subscribeState.value = ApiResult.Loading
+            _subscribeState.value = repo.subscribe(id)
+        }
+    }
+
+    fun resetSubscribeState() { _subscribeState.value = null }
+
+    // ── Create ────────────────────────────────────────────────────────────────
+
     private val _createState = MutableStateFlow<ApiResult<LiftClubDto>?>(null)
     val createState: StateFlow<ApiResult<LiftClubDto>?> = _createState
 

@@ -13,9 +13,12 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.SampleData
+import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.UserViewModel
 
 @Composable
 fun ProfileScreen(
@@ -23,9 +26,20 @@ fun ProfileScreen(
     onSignOut     : () -> Unit = {},
     onAppearance  : () -> Unit = {},
     onEditProfile : () -> Unit = {},
+    viewModel     : UserViewModel = viewModel(),
 ) {
-    val c    = LocalAppColors.current
-    val user = SampleData.currentUser
+    val c            = LocalAppColors.current
+    val profileState by viewModel.profile.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadProfile() }
+
+    // Fall back to SampleData while the API call is in-flight or on error
+    val apiUser = (profileState as? ApiResult.Success)?.data
+    val name  = apiUser?.name  ?: SampleData.currentUser.name
+    val email = apiUser?.email ?: SampleData.currentUser.email
+    val phone = apiUser?.phone ?: SampleData.currentUser.phone
+    val role  = apiUser?.role  ?: SampleData.currentUser.role.name
+    val user = SampleData.currentUser  // still needed for avatarUri and role enum
     var showSignOutDialog by remember { mutableStateOf(false) }
     val themeMode = LocalThemeMode.current
 
@@ -83,7 +97,7 @@ fun ProfileScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(contentAlignment = Alignment.BottomEnd) {
                         UserAvatar(
-                            name      = user.name,
+                            name      = name,
                             avatarUri = user.avatarUri,
                             size      = 88.dp,
                             onClick   = onEditProfile,
@@ -101,8 +115,8 @@ fun ProfileScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text(user.name, style = MaterialTheme.typography.headlineMedium, color = c.textBright)
-                    Text(user.role.name.lowercase().replaceFirstChar { it.uppercase() },
+                    Text(name, style = MaterialTheme.typography.headlineMedium, color = c.textBright)
+                    Text(role.lowercase().replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                 }
             }
@@ -111,11 +125,11 @@ fun ProfileScreen(
                 Spacer(Modifier.height(8.dp))
                 SectionHeader(title = "Account Details", action = "Edit", onAction = onEditProfile)
                 KntCard {
-                    ProfileRow(Icons.Rounded.Email, "Email", user.email)
+                    ProfileRow(Icons.Rounded.Email, "Email", email)
                     KntDivider()
-                    ProfileRow(Icons.Rounded.Phone, "Phone", user.phone)
+                    ProfileRow(Icons.Rounded.Phone, "Phone", phone)
                     KntDivider()
-                    ProfileRow(Icons.Rounded.Person, "Role", user.role.name.lowercase().replaceFirstChar { it.uppercase() })
+                    ProfileRow(Icons.Rounded.Person, "Role", role.lowercase().replaceFirstChar { it.uppercase() })
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -123,29 +137,22 @@ fun ProfileScreen(
                 KntCard {
                     when (user.role) {
                         com.kntransport.app.data.UserRole.DRIVER -> {
-                            ActivityRow(Icons.Rounded.DirectionsBus, "Trips Driven",
-                                "${SampleData.driverTrips.size}", c.blue)
-                            KntDivider()
-                            ActivityRow(Icons.Rounded.CheckCircle, "Completed Trips",
-                                "${SampleData.driverTrips.count { it.status == com.kntransport.app.data.TripStatus.COMPLETED }}", StatusGreen)
-                            KntDivider()
-                            ActivityRow(Icons.Rounded.Payments, "Total Earned",
-                                "R${SampleData.driverTrips.filter { it.status == com.kntransport.app.data.TripStatus.COMPLETED }.mapNotNull { it.quotedAmount }.sum().let { "%.0f".format(it) }}", c.yellow)
+                            // Counts shown from API profile fields when available
+                            val vInfo = apiUser?.currentVehicleMake?.let { "$it ${apiUser.currentVehicleModel ?: ""}" }?.trim()
+                            if (!vInfo.isNullOrBlank()) {
+                                ActivityRow(Icons.Rounded.DirectionsBus, "Current Vehicle", vInfo, c.blue)
+                                KntDivider()
+                            }
+                            ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Driver", KntYellow)
                         }
                         com.kntransport.app.data.UserRole.ADMIN -> {
-                            ActivityRow(Icons.Rounded.People, "Users Managed",     "7",  c.blue)
-                            KntDivider()
-                            ActivityRow(Icons.Rounded.DirectionsBus, "Total Trips", "24", c.yellow)
-                            KntDivider()
-                            ActivityRow(Icons.Rounded.AdminPanelSettings, "Role",   "Administrator", KntOrange)
+                            ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Administrator", KntOrange)
                         }
                         else -> {
-                            ActivityRow(Icons.Rounded.DirectionsBus, "Total Trips",        "${SampleData.myTrips.size}", c.blue)
+                            ActivityRow(Icons.Rounded.Groups, "Lift Club Subscriptions",
+                                "${SampleData.myLiftClubSubscriptions.size}", c.yellow)
                             KntDivider()
-                            ActivityRow(Icons.Rounded.Groups, "Lift Club Subscriptions",   "${SampleData.myLiftClubSubscriptions.size}", c.yellow)
-                            KntDivider()
-                            ActivityRow(Icons.Rounded.CheckCircle, "Completed Trips",
-                                "${SampleData.myTrips.count { it.status == com.kntransport.app.data.TripStatus.COMPLETED }}", StatusGreen)
+                            ActivityRow(Icons.Rounded.AdminPanelSettings, "Role", "Commuter", c.blue)
                         }
                     }
                 }

@@ -13,31 +13,53 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.NotificationDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.formatRelativeTime
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.NotificationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
-    onBack               : () -> Unit,
-    onNotificationClick  : (AppNotification) -> Unit = {},
+    onBack              : () -> Unit,
+    onNotificationClick : (AppNotification) -> Unit = {},
+    viewModel           : NotificationViewModel = viewModel(),
 ) {
     val c      = LocalAppColors.current
-    val notifs = remember { SampleData.notifications.toMutableStateList() }
+    val state by viewModel.notifications.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadNotifications() }
+
+    val notifs = (state as? ApiResult.Success)?.data ?: emptyList()
+    val hasUnread = notifs.any { !it.read }
 
     KntScaffold(
         title   = "Notifications",
         onBack  = onBack,
         actions = {
-            if (notifs.any { !it.read }) {
-                TextButton(onClick = { notifs.replaceAll { it.copy(read = true) } }) {
+            if (hasUnread) {
+                TextButton(onClick = { viewModel.markAllRead() }) {
                     Text("Mark all read", style = MaterialTheme.typography.labelMedium, color = c.blue)
                 }
             }
         },
     ) { pv ->
+        if (state is ApiResult.Loading) {
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@KntScaffold
+        }
+        if (state is ApiResult.Error) {
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                ErrorState(message = (state as ApiResult.Error).message, onRetry = { viewModel.loadNotifications() })
+            }
+            return@KntScaffold
+        }
         if (notifs.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pv), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -70,7 +92,6 @@ fun NotificationsScreen(
                 }
 
                 notifs.forEachIndexed { idx, notif ->
-                    // Staggered entry animation
                     var visible by remember { mutableStateOf(false) }
                     LaunchedEffect(notif.id) {
                         kotlinx.coroutines.delay(idx * 60L)
@@ -80,13 +101,23 @@ fun NotificationsScreen(
                         visible = visible,
                         enter   = slideInVertically(tween(320, easing = EaseOutCubic)) { it / 3 } + fadeIn(tween(320)),
                     ) {
-                        SwipeableNotifCard(
+                        SwipeableNotifDtoCard(
                             notif     = notif,
-                            onRead    = { notifs[idx] = notif.copy(read = true) },
-                            onDismiss = { notifs.removeAt(idx) },
+                            onRead    = { viewModel.markRead(notif.id) },
+                            onDismiss = { viewModel.dismissLocal(notif.id) },
                             onClick   = {
-                                notifs[idx] = notif.copy(read = true)
-                                onNotificationClick(notifs[idx])
+                                viewModel.markRead(notif.id)
+                                // Map to AppNotification for the existing detail screen
+                                onNotificationClick(AppNotification(
+                                    id            = notif.id,
+                                    type          = runCatching { NotifType.valueOf(notif.type) }.getOrElse { NotifType.GENERAL },
+                                    title         = notif.title,
+                                    body          = notif.body,
+                                    timestamp     = notif.timestamp,
+                                    read          = notif.read,
+                                    referenceId   = notif.referenceId,
+                                    referenceType = notif.referenceType,
+                                ))
                             },
                         )
                     }
@@ -95,6 +126,23 @@ fun NotificationsScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableNotifDtoCard(
+    notif    : NotificationDto,
+    onRead   : () -> Unit,
+    onDismiss: () -> Unit,
+    onClick  : () -> Unit = {},
+) {
+    val type = runCatching { NotifType.valueOf(notif.type) }.getOrElse { NotifType.GENERAL }
+    val appNotif = AppNotification(
+        id = notif.id, type = type, title = notif.title, body = notif.body,
+        timestamp = notif.timestamp, read = notif.read,
+        referenceId = notif.referenceId, referenceType = notif.referenceType,
+    )
+    SwipeableNotifCard(notif = appNotif, onRead = onRead, onDismiss = onDismiss, onClick = onClick)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

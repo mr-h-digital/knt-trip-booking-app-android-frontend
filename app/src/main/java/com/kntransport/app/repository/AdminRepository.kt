@@ -1,6 +1,10 @@
 package com.kntransport.app.repository
 
 import com.kntransport.app.network.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
 class AdminRepository {
 
@@ -39,6 +43,15 @@ class AdminRepository {
 
     suspend fun deactivateVehicle(id: String) =
         safeApiCall { api.deactivateVehicle(id) }
+
+    suspend fun reactivateVehicle(id: String) =
+        safeApiCall { api.reactivateVehicle(id) }
+
+    suspend fun uploadVehiclePhoto(id: String, file: File): ApiResult<VehicleDto> {
+        val body = file.asRequestBody("image/*".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("photo", file.name, body)
+        return safeApiCall { api.uploadVehiclePhoto(id, part) }
+    }
 
     suspend fun assignVehicle(driverId: String, vehicleId: String?) =
         safeApiCall { api.assignVehicle(driverId, AssignVehicleRequest(vehicleId)) }

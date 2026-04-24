@@ -15,30 +15,41 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.components.DriverNavTab
 import com.kntransport.app.ui.components.NavTabItem
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.DriverViewModel
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriverDashboardScreen(
-    onBack        : () -> Unit,
-    onMyTrips     : () -> Unit,
-    onEarnings    : () -> Unit,
-    onProfile     : () -> Unit,
+    onBack         : () -> Unit,
+    onMyTrips      : () -> Unit,
+    onEarnings     : () -> Unit,
+    onProfile      : () -> Unit,
     onNotifications: () -> Unit,
-    onTripDetail  : (String) -> Unit,
+    onTripDetail   : (String) -> Unit,
+    viewModel      : DriverViewModel = viewModel(),
 ) {
-    val c            = LocalAppColors.current
-    val driver       = SampleData.currentUser
-    val allTrips     = SampleData.driverTrips
-    val todayTrips   = allTrips.filter { it.date == java.time.LocalDate.now() }
-    val activeTrip   = todayTrips.firstOrNull { it.status == TripStatus.IN_PROGRESS }
-    val nextTrip     = todayTrips.firstOrNull { it.status == TripStatus.CONFIRMED || it.status == TripStatus.QUOTE_ACCEPTED }
-    val unreadCount  = SampleData.notifications.count { !it.read }
+    val c          = LocalAppColors.current
+    val driver     = SampleData.currentUser
+    val tripsState by viewModel.trips.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadTrips() }
+
+    val today      = LocalDate.now()
+    val allTrips   = (tripsState as? ApiResult.Success)?.data ?: emptyList()
+    val todayTrips = allTrips.filter { runCatching { LocalDate.parse(it.date) }.getOrNull() == today }
+    val activeTrip = todayTrips.firstOrNull { it.status == "IN_PROGRESS" }
+    val nextTrip   = todayTrips.firstOrNull { it.status in listOf("CONFIRMED", "QUOTE_ACCEPTED") }
+    val unreadCount = SampleData.notifications.count { !it.read }
     var selectedTab  by remember { mutableIntStateOf(0) }
 
     val driverTabs = DriverNavTab.entries.map { NavTabItem(it.label, it.icon) }
@@ -169,7 +180,7 @@ fun DriverDashboardScreen(
                         modifier = Modifier.weight(1f),
                     )
                     DriverStatChip(
-                        value = allTrips.count { it.status == TripStatus.COMPLETED }.toString(),
+                        value = allTrips.count { it.status == "COMPLETED" }.toString(),
                         label = "Total Done",
                         tint  = c.yellow,
                         modifier = Modifier.weight(1f),
@@ -191,18 +202,15 @@ fun DriverDashboardScreen(
                         ) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        Modifier.size(10.dp).clip(CircleShape).background(StatusGreen),
-                                    )
+                                    Box(Modifier.size(10.dp).clip(CircleShape).background(StatusGreen))
                                     Spacer(Modifier.width(6.dp))
                                     Text("TRIP IN PROGRESS", style = MaterialTheme.typography.labelSmall.copy(
-                                        letterSpacing = 1.sp, fontWeight = FontWeight.Bold,
-                                    ), color = KntWhite)
+                                        letterSpacing = 1.sp, fontWeight = FontWeight.Bold), color = KntWhite)
                                     Spacer(Modifier.weight(1f))
                                     Icon(Icons.Rounded.ChevronRight, null, tint = KntWhite.copy(0.7f), modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(Modifier.height(10.dp))
-                                Text(activeTrip.commuterName, style = MaterialTheme.typography.titleMedium, color = KntWhite)
+                                Text(activeTrip.commuterName ?: "Commuter", style = MaterialTheme.typography.titleMedium, color = KntWhite)
                                 Spacer(Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Icon(Icons.Rounded.LocationOn, null, tint = KntYellow, modifier = Modifier.size(14.dp))
@@ -218,7 +226,7 @@ fun DriverDashboardScreen(
                     Spacer(Modifier.height(20.dp))
                     SectionHeader(title = "Next Trip")
                     Spacer(Modifier.height(10.dp))
-                    DriverTripCard(trip = nextTrip, onClick = { onTripDetail(nextTrip.id) })
+                    DriverTripDtoCard(trip = nextTrip, onClick = { onTripDetail(nextTrip.id) })
                 }
 
                 // ── Quick actions ─────────────────────────────────────────
@@ -313,10 +321,9 @@ fun DriverDashboardScreen(
                     Spacer(Modifier.height(24.dp))
                     SectionHeader(title = "Today's Schedule", action = "See All", onAction = onMyTrips)
                     Spacer(Modifier.height(10.dp))
-                    val fmt = DateTimeFormatter.ofPattern("HH:mm")
                     todayTrips.forEachIndexed { idx, trip ->
                         StaggeredItem(index = idx) {
-                            DriverTripCard(trip = trip, onClick = { onTripDetail(trip.id) })
+                            DriverTripDtoCard(trip = trip, onClick = { onTripDetail(trip.id) })
                         }
                         Spacer(Modifier.height(10.dp))
                     }

@@ -57,6 +57,7 @@ object Routes {
     const val ADMIN_VEHICLE_DETAIL = "admin_vehicle_detail"
     const val ADMIN_ADD_VEHICLE    = "admin_add_vehicle"
     const val ADMIN_EDIT_VEHICLE   = "admin_edit_vehicle"
+    const val ADMIN_TRIPS          = "admin_trips"
 
     fun rateTrip(id: String) = "rate_trip/$id"
 
@@ -346,7 +347,7 @@ fun KntNavHost(
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
                 onUsers      = { navController.navigate(Routes.ADMIN_USERS) },
-                onTrips      = { navController.navigate(Routes.MY_TRIPS) },
+                onTrips      = { navController.navigate(Routes.ADMIN_TRIPS) },
                 onAnalytics  = { navController.navigate(Routes.ADMIN_ANALYTICS) },
                 onFinancials = { navController.navigate(Routes.ADMIN_FINANCIALS) },
                 onFleet      = { navController.navigate(Routes.ADMIN_FLEET) },
@@ -455,6 +456,13 @@ fun KntNavHost(
                         popUpTo(Routes.ADMIN_FLEET) { inclusive = true }
                     }
                 },
+                viewModel = adminViewModel,
+            )
+        }
+
+        composable(Routes.ADMIN_TRIPS) {
+            AdminTripsScreen(
+                onBack    = { navController.popBackStack() },
                 viewModel = adminViewModel,
             )
         }

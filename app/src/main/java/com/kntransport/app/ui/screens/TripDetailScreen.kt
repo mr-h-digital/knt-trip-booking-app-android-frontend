@@ -18,9 +18,13 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.unit.*
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.TripViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -51,25 +55,60 @@ fun TripDetailScreen(
     onBack       : () -> Unit,
     onQuoteReview: (String) -> Unit,
     onRateTrip   : (String) -> Unit = {},
+    viewModel    : TripViewModel = viewModel(),
 ) {
-    val c    = LocalAppColors.current
-    val trip = SampleData.myTrips.firstOrNull { it.id == tripId } ?: run {
-        Box(Modifier.fillMaxSize().background(c.bgDeep), Alignment.Center) {
-            Text("Trip not found", color = c.textMuted)
+    val c            = LocalAppColors.current
+    val tripState   by viewModel.selectedTrip.collectAsState()
+    val cancelState by viewModel.cancelState.collectAsState()
+
+    LaunchedEffect(tripId) { viewModel.loadTrip(tripId) }
+
+    // Show loading while fetching
+    if (tripState is ApiResult.Loading || tripState == null) {
+        KntScaffold(title = "Trip Details", onBack = onBack) { pv ->
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
         return
     }
-    val fmt = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")
+    if (tripState is ApiResult.Error) {
+        KntScaffold(title = "Trip Details", onBack = onBack) { pv ->
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                ErrorState(message = (tripState as ApiResult.Error).message, onRetry = { viewModel.loadTrip(tripId) })
+            }
+        }
+        return
+    }
 
-    var currentStatus  by remember { mutableStateOf(trip.status) }
+    val dto  = (tripState as ApiResult.Success<TripBookingDto>).data
+    val fmt  = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")
+    val date = try { LocalDate.parse(dto.date) } catch (_: Exception) { LocalDate.now() }
+    val time = try { LocalTime.parse(dto.time) } catch (_: Exception) { LocalTime.MIDNIGHT }
+
+    var currentStatus   by remember(dto.id) { mutableStateOf(dto.status) }
     var showCancelSheet by remember { mutableStateOf(false) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(cancelState) {
+        when (val s = cancelState) {
+            is ApiResult.Success -> { currentStatus = "CANCELLED"; viewModel.resetCancelState() }
+            is ApiResult.Error   -> { errorMessage = s.message;    viewModel.resetCancelState() }
+            else -> {}
+        }
+    }
+
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
 
     if (showCancelSheet) {
         CancelTripSheet(
             reasons   = COMMUTER_CANCEL_REASONS,
             onDismiss = { showCancelSheet = false },
-            onConfirm = { _, _ ->
-                currentStatus = TripStatus.CANCELLED
+            onConfirm = { reason, note ->
+                viewModel.cancelTrip(tripId, reason, note)
                 showCancelSheet = false
             },
         )
@@ -77,14 +116,14 @@ fun TripDetailScreen(
 
     // Live countdown for confirmed/in-progress trips
     var countdownText by remember { mutableStateOf("") }
-    LaunchedEffect(trip.id) {
-        if (currentStatus in listOf(TripStatus.CONFIRMED, TripStatus.IN_PROGRESS)) {
-            val pickupDateTime = LocalDateTime.of(trip.date, trip.time)
+    LaunchedEffect(dto.id, currentStatus) {
+        if (currentStatus in listOf("CONFIRMED", "IN_PROGRESS")) {
+            val pickupDateTime = LocalDateTime.of(date, time)
             while (true) {
                 val now  = LocalDateTime.now()
                 val diff = java.time.Duration.between(now, pickupDateTime)
                 countdownText = if (diff.isNegative) {
-                    if (trip.status == TripStatus.IN_PROGRESS) "En Route" else "Departed"
+                    if (currentStatus == "IN_PROGRESS") "En Route" else "Departed"
                 } else {
                     val h = diff.toHours()
                     val m = diff.toMinutesPart()
@@ -96,7 +135,7 @@ fun TripDetailScreen(
         }
     }
 
-    KntScaffold(title = "Trip Details", onBack = onBack) { pv ->
+    KntScaffold(title = "Trip Details", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,7 +147,7 @@ fun TripDetailScreen(
 
             // ── Countdown banner ──────────────────────────────────────────
             if (countdownText.isNotEmpty()) {
-                val isEnRoute = currentStatus == TripStatus.IN_PROGRESS
+                val isEnRoute = currentStatus == "IN_PROGRESS"
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -146,8 +185,8 @@ fun TripDetailScreen(
             }
 
             // ── Status pipeline ───────────────────────────────────────────
-            if (currentStatus != TripStatus.CANCELLED) {
-                TripStatusPipeline(currentStatus = currentStatus)
+            if (currentStatus != "CANCELLED") {
+                TripStatusPipelineDto(currentStatus = currentStatus)
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -155,21 +194,21 @@ fun TripDetailScreen(
             KntCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Trip #${trip.id.uppercase()}", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
+                        Text("Trip #${dto.id.uppercase()}", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
                         Spacer(Modifier.height(2.dp))
-                        Text(trip.date.format(fmt), style = MaterialTheme.typography.titleMedium, color = c.textBright)
+                        Text(date.format(fmt), style = MaterialTheme.typography.titleMedium, color = c.textBright)
                     }
-                    TripStatusChip(currentStatus)
+                    TripStatusDtoChip(currentStatus)
                 }
                 KntDivider()
-                InfoRow(Icons.Rounded.LocationOn, "Pickup",     trip.pickupAddress)
-                InfoRow(Icons.Rounded.Flag,       "Drop-off",   trip.dropAddress)
-                InfoRow(Icons.Rounded.Schedule,   "Time",       trip.time.toString())
-                InfoRow(Icons.Rounded.Person,     "Passengers", trip.passengers.toString())
+                InfoRow(Icons.Rounded.LocationOn, "Pickup",     dto.pickupAddress)
+                InfoRow(Icons.Rounded.Flag,       "Drop-off",   dto.dropAddress)
+                InfoRow(Icons.Rounded.Schedule,   "Time",       dto.time)
+                InfoRow(Icons.Rounded.Person,     "Passengers", dto.passengers.toString())
             }
 
             // ── Quote card ────────────────────────────────────────────────
-            if (trip.quotedAmount != null && currentStatus == TripStatus.QUOTE_SENT) {
+            if (dto.quotedAmount != null && currentStatus == "QUOTE_SENT") {
                 Spacer(Modifier.height(16.dp))
                 Surface(
                     shape    = RoundedCornerShape(16.dp),
@@ -184,36 +223,35 @@ fun TripDetailScreen(
                             Text("Quote Received", style = MaterialTheme.typography.titleMedium, color = c.yellow)
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text("R${String.format("%.2f", trip.quotedAmount)}", style = MaterialTheme.typography.displaySmall.copy(color = c.yellow))
+                        Text("R${String.format("%.2f", dto.quotedAmount)}", style = MaterialTheme.typography.displaySmall.copy(color = c.yellow))
                         Text("one-way trip", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         Spacer(Modifier.height(16.dp))
                         Text("Payment is due upfront once you accept this quote.", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         Spacer(Modifier.height(16.dp))
-                        KntPrimaryButton(text = "Review & Accept Quote", onClick = { onQuoteReview(trip.id) }, icon = Icons.Rounded.CheckCircle)
+                        KntPrimaryButton(text = "Review & Accept Quote", onClick = { onQuoteReview(dto.id) }, icon = Icons.Rounded.CheckCircle)
                     }
                 }
             }
 
             // ── Driver & vehicle info ─────────────────────────────────────
-            if (trip.driverName != null) {
+            if (dto.driverName != null) {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "Your Driver")
                 KntCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Driver avatar — real photo if available, else initials
                         Box(
                             Modifier.size(48.dp).clip(CircleShape).background(c.blue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (!trip.driverAvatarUrl.isNullOrBlank()) {
+                            if (!dto.driverAvatarUrl.isNullOrBlank()) {
                                 AsyncImage(
-                                    model              = ImageRequest.Builder(LocalContext.current).data(trip.driverAvatarUrl).build(),
-                                    contentDescription = trip.driverName,
+                                    model              = ImageRequest.Builder(LocalContext.current).data(dto.driverAvatarUrl).build(),
+                                    contentDescription = dto.driverName,
                                     contentScale       = ContentScale.Crop,
                                     modifier           = Modifier.fillMaxSize().clip(CircleShape),
                                 )
                             } else {
-                                val initials = trip.driverName.split(" ")
+                                val initials = dto.driverName.split(" ")
                                     .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
                                 if (initials.isNotEmpty()) {
                                     Text(initials, style = MaterialTheme.typography.titleSmall.copy(
@@ -225,15 +263,15 @@ fun TripDetailScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(trip.driverName, style = MaterialTheme.typography.titleMedium, color = c.textBright)
+                            Text(dto.driverName, style = MaterialTheme.typography.titleMedium, color = c.textBright)
                             Text("K&T Transport Driver", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         }
                     }
                     // ── Vehicle card ──────────────────────────────────────
-                    if (trip.vehicleInfo != null || trip.vehiclePlate != null) {
+                    if (dto.vehicleInfo != null || dto.vehiclePlate != null) {
                         KntDivider()
-                        val vehicleDisplay = trip.vehicleInfo ?: ""
-                        val plateDisplay   = trip.vehiclePlate ?: ""
+                        val vehicleDisplay = dto.vehicleInfo ?: ""
+                        val plateDisplay   = dto.vehiclePlate ?: ""
                         Surface(
                             shape  = RoundedCornerShape(10.dp),
                             color  = c.surface1,
@@ -245,7 +283,7 @@ fun TripDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 VehiclePhotoAvatar(
-                                    photoUrl = trip.vehiclePhotoUrl,
+                                    photoUrl = dto.vehiclePhotoUrl,
                                     size     = 40.dp,
                                     shape    = RoundedCornerShape(10.dp),
                                 )
@@ -277,8 +315,7 @@ fun TripDetailScreen(
 
             // ── Cancel button ─────────────────────────────────────────────
             val cancellable = currentStatus in listOf(
-                TripStatus.PENDING_QUOTE, TripStatus.QUOTE_SENT,
-                TripStatus.QUOTE_ACCEPTED, TripStatus.CONFIRMED,
+                "PENDING_QUOTE", "QUOTE_SENT", "QUOTE_ACCEPTED", "CONFIRMED",
             )
             if (cancellable) {
                 Spacer(Modifier.height(16.dp))
@@ -316,7 +353,7 @@ fun TripDetailScreen(
             }
 
             // ── Receipt ───────────────────────────────────────────────────
-            if (currentStatus == TripStatus.COMPLETED && trip.quotedAmount != null) {
+            if (currentStatus == "COMPLETED" && dto.quotedAmount != null) {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "Receipt")
                 KntCard {
@@ -325,7 +362,7 @@ fun TripDetailScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Trip Completed", style = MaterialTheme.typography.titleSmall, color = StatusGreen)
                         Spacer(Modifier.weight(1f))
-                        Text("R${String.format("%.2f", trip.quotedAmount)}", style = MaterialTheme.typography.titleMedium, color = c.yellow)
+                        Text("R${String.format("%.2f", dto.quotedAmount)}", style = MaterialTheme.typography.titleMedium, color = c.yellow)
                     }
                     Spacer(Modifier.height(8.dp))
                     Text("Thank you for travelling with K&T Transport.", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
@@ -333,7 +370,7 @@ fun TripDetailScreen(
                 Spacer(Modifier.height(16.dp))
                 KntSecondaryButton(
                     text    = "Rate This Trip",
-                    onClick = { onRateTrip(trip.id) },
+                    onClick = { onRateTrip(dto.id) },
                     icon    = Icons.Rounded.Star,
                 )
             }
@@ -343,10 +380,23 @@ fun TripDetailScreen(
     }
 }
 
+private val PIPELINE_STRINGS = listOf(
+    "PENDING_QUOTE", "QUOTE_SENT", "QUOTE_ACCEPTED", "CONFIRMED", "IN_PROGRESS", "COMPLETED"
+)
+
+@Composable
+private fun TripStatusPipelineDto(currentStatus: String) {
+    TripStatusPipeline(activeIdx = PIPELINE_STRINGS.indexOf(currentStatus).coerceAtLeast(0))
+}
+
 @Composable
 private fun TripStatusPipeline(currentStatus: TripStatus) {
-    val c          = LocalAppColors.current
-    val activeIdx  = PIPELINE.indexOf(currentStatus).coerceAtLeast(0)
+    TripStatusPipeline(activeIdx = PIPELINE.indexOf(currentStatus).coerceAtLeast(0))
+}
+
+@Composable
+private fun TripStatusPipeline(activeIdx: Int) {
+    val c = LocalAppColors.current
 
     // Glow pulse on the active step
     val glowAnim = rememberInfiniteTransition(label = "glow")

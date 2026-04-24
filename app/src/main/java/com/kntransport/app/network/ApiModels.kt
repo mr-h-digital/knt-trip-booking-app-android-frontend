@@ -197,6 +197,16 @@ data class AssignDriverRequest(
     @SerializedName("driverId") val driverId : String,
 )
 
+data class CancelTripRequest(
+    @SerializedName("reason") val reason : String,
+    @SerializedName("note")   val note   : String = "",
+)
+
+data class RateTripRequest(
+    @SerializedName("rating")  val rating  : Int,
+    @SerializedName("comment") val comment : String = "",
+)
+
 data class AnalyticsDto(
     @SerializedName("totalUsers")          val totalUsers          : Long = 0,
     @SerializedName("totalCommuters")      val totalCommuters      : Long = 0,

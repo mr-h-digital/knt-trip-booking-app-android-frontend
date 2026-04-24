@@ -37,6 +37,12 @@ interface ApiService {
     @POST("api/trips")
     suspend fun createTrip(@Body request: CreateTripRequest): Response<TripBookingDto>
 
+    @PATCH("api/trips/{id}/cancel")
+    suspend fun cancelTrip(@Path("id") id: String, @Body request: CancelTripRequest): Response<TripBookingDto>
+
+    @POST("api/trips/{id}/rate")
+    suspend fun rateTrip(@Path("id") id: String, @Body request: RateTripRequest): Response<Unit>
+
     // ── Lift Clubs ────────────────────────────────────────────────────────────
     @GET("api/lift-clubs")
     suspend fun getLiftClubs(
@@ -103,6 +109,9 @@ interface ApiService {
     @DELETE("api/admin/vehicles/{id}")
     suspend fun deactivateVehicle(@Path("id") id: String): Response<Unit>
 
+    @PATCH("api/admin/vehicles/{id}/reactivate")
+    suspend fun reactivateVehicle(@Path("id") id: String): Response<VehicleDto>
+
     @Multipart
     @POST("api/admin/vehicles/{id}/photo")
     suspend fun uploadVehiclePhoto(
@@ -145,6 +154,9 @@ interface ApiService {
 
     @PATCH("api/driver/trips/{id}/status")
     suspend fun updateTripStatus(@Path("id") id: String, @Body request: UpdateTripStatusRequest): Response<TripBookingDto>
+
+    @PATCH("api/driver/trips/{id}/cancel")
+    suspend fun cancelDriverTrip(@Path("id") id: String, @Body request: CancelTripRequest): Response<TripBookingDto>
 
     @GET("api/driver/earnings")
     suspend fun getDriverEarnings(): Response<DriverEarningsDto>

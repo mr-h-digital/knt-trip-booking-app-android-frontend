@@ -14,39 +14,70 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
 import com.kntransport.app.data.*
+import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import com.kntransport.app.viewmodel.DriverViewModel
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriverTripDetailScreen(
-    tripId : String,
-    onBack : () -> Unit,
+    tripId    : String,
+    onBack    : () -> Unit,
+    viewModel : DriverViewModel = viewModel(),
 ) {
-    val c    = LocalAppColors.current
-    val trip = remember(tripId) { SampleData.driverTrips.find { it.id == tripId } }
+    val c          = LocalAppColors.current
+    val tripState by viewModel.selectedTrip.collectAsState()
+    val actionState by viewModel.tripActionState.collectAsState()
 
-    if (trip == null) {
-        LaunchedEffect(Unit) { onBack() }
+    LaunchedEffect(tripId) { viewModel.loadTrip(tripId) }
+
+    if (tripState is ApiResult.Loading || tripState == null) {
+        KntScaffold(title = "Trip Detail", onBack = onBack) { pv ->
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+        return
+    }
+    if (tripState is ApiResult.Error) {
+        KntScaffold(title = "Trip Detail", onBack = onBack) { pv ->
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                ErrorState(message = (tripState as ApiResult.Error).message, onRetry = { viewModel.loadTrip(tripId) })
+            }
+        }
         return
     }
 
-    var currentStatus by remember { mutableStateOf(trip.status) }
+    val dto = (tripState as ApiResult.Success<TripBookingDto>).data
+
+    var currentStatus      by remember(dto.id) { mutableStateOf(dto.status) }
     var showConfirmDialog  by remember { mutableStateOf(false) }
     var showCancelSheet    by remember { mutableStateOf(false) }
-    var pendingStatus      by remember { mutableStateOf<TripStatus?>(null) }
+    var pendingStatus      by remember { mutableStateOf<String?>(null) }
+    var errorMessage       by remember { mutableStateOf<String?>(null) }
 
-    val dateFmt = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
-    val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+    LaunchedEffect(actionState) {
+        when (val s = actionState) {
+            is ApiResult.Success -> { currentStatus = s.data.status; viewModel.resetTripActionState() }
+            is ApiResult.Error   -> { errorMessage = s.message;      viewModel.resetTripActionState() }
+            else -> {}
+        }
+    }
+    val snackbarState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+
 
     if (showCancelSheet) {
         CancelTripSheet(
             reasons   = DRIVER_CANCEL_REASONS,
             onDismiss = { showCancelSheet = false },
-            onConfirm = { _, _ ->
-                currentStatus = TripStatus.CANCELLED
+            onConfirm = { reason, note ->
+                viewModel.cancelTrip(tripId, reason, note)
                 showCancelSheet = false
             },
         )
@@ -59,9 +90,9 @@ fun DriverTripDetailScreen(
             title = {
                 Text(
                     when (pendingStatus) {
-                        TripStatus.IN_PROGRESS -> "Start Trip?"
-                        TripStatus.COMPLETED   -> "Complete Trip?"
-                        else -> "Update Status?"
+                        "IN_PROGRESS" -> "Start Trip?"
+                        "COMPLETED"   -> "Complete Trip?"
+                        else          -> "Update Status?"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = c.textBright,
@@ -70,9 +101,9 @@ fun DriverTripDetailScreen(
             text = {
                 Text(
                     when (pendingStatus) {
-                        TripStatus.IN_PROGRESS -> "Confirm that you have picked up ${trip.commuterName} and the trip has started."
-                        TripStatus.COMPLETED   -> "Confirm that you have safely dropped off ${trip.commuterName} and the trip is complete."
-                        else -> "Update the trip status?"
+                        "IN_PROGRESS" -> "Confirm that you have picked up ${dto.commuterName} and the trip has started."
+                        "COMPLETED"   -> "Confirm that you have safely dropped off ${dto.commuterName} and the trip is complete."
+                        else          -> "Update the trip status?"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = c.textMuted,
@@ -81,12 +112,12 @@ fun DriverTripDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        currentStatus    = pendingStatus!!
+                        pendingStatus?.let { viewModel.updateTripStatus(tripId, it) }
                         showConfirmDialog = false
                         pendingStatus    = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (pendingStatus == TripStatus.COMPLETED) StatusGreen else c.blue
+                        containerColor = if (pendingStatus == "COMPLETED") StatusGreen else c.blue
                     ),
                 ) {
                     Text("Confirm")
@@ -100,7 +131,7 @@ fun DriverTripDetailScreen(
         )
     }
 
-    KntScaffold(title = "Trip Detail", onBack = onBack) { pv ->
+    KntScaffold(title = "Trip Detail", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pv)
                 .verticalScroll(rememberScrollState()),
@@ -114,11 +145,11 @@ fun DriverTripDetailScreen(
                 HeroBgImage(resId = R.drawable.hero_bg_4, modifier = Modifier.fillMaxSize(), darkOverlay = 0.52f)
                 Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp)) {
                     Text(
-                        trip.commuterName,
+                        dto.commuterName ?: "Commuter",
                         style = MaterialTheme.typography.titleMedium.copy(color = KntWhite),
                     )
                     Text(
-                        "${trip.pickupAddress}  →  ${trip.dropAddress}",
+                        "${dto.pickupAddress}  →  ${dto.dropAddress}",
                         style = MaterialTheme.typography.bodySmall.copy(color = KntYellow),
                         maxLines = 1,
                     )
@@ -130,11 +161,12 @@ fun DriverTripDetailScreen(
 
             // ── Status banner ─────────────────────────────────────────────
             val (bannerColor, bannerLabel) = when (currentStatus) {
-                TripStatus.IN_PROGRESS -> KntBlue to "Trip In Progress"
-                TripStatus.CONFIRMED   -> KntYellow to "Confirmed — Ready to Start"
-                TripStatus.COMPLETED   -> StatusGreen to "Trip Completed"
-                TripStatus.CANCELLED   -> StatusRed to "Trip Cancelled"
-                else                   -> KntMuted to currentStatus.name.replace("_", " ")
+                "IN_PROGRESS"    -> KntBlue to "Trip In Progress"
+                "CONFIRMED",
+                "QUOTE_ACCEPTED" -> KntYellow to "Confirmed — Ready to Start"
+                "COMPLETED"      -> StatusGreen to "Trip Completed"
+                "CANCELLED"      -> StatusRed to "Trip Cancelled"
+                else             -> KntMuted to currentStatus.replace("_", " ")
             }
             Surface(
                 shape    = RoundedCornerShape(14.dp),
@@ -166,16 +198,16 @@ fun DriverTripDetailScreen(
                             .background(Brush.linearGradient(listOf(KntBlue.copy(0.7f), KntBlueBright.copy(0.5f)))),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val initials = trip.commuterName.split(" ")
+                        val initials = (dto.commuterName ?: "?").split(" ")
                             .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
                         Text(initials, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(trip.commuterName, style = MaterialTheme.typography.titleSmall, color = c.textBright)
+                        Text(dto.commuterName ?: "Commuter", style = MaterialTheme.typography.titleSmall, color = c.textBright)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(Icons.Rounded.Person, null, tint = c.textDim, modifier = Modifier.size(12.dp))
-                            Text("${trip.passengers} passenger${if (trip.passengers > 1) "s" else ""}", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                            Text("${dto.passengers} passenger${if (dto.passengers > 1) "s" else ""}", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         }
                     }
                     IconButton(onClick = {}) {
@@ -209,31 +241,31 @@ fun DriverTripDetailScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column {
                                 Text("Pickup", style = MaterialTheme.typography.labelSmall, color = c.textDim)
-                                Text(trip.pickupAddress, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
+                                Text(dto.pickupAddress, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
                             }
                             Column {
                                 Text("Drop-off", style = MaterialTheme.typography.labelSmall, color = c.textDim)
-                                Text(trip.dropAddress, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
+                                Text(dto.dropAddress, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
                             }
                         }
                     }
                     KntDivider()
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        InfoRow(Icons.Rounded.CalendarMonth, "Date", trip.date.format(dateFmt))
+                        InfoRow(Icons.Rounded.CalendarMonth, "Date", dto.date)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        InfoRow(Icons.Rounded.Schedule, "Time", trip.time.format(timeFmt))
+                        InfoRow(Icons.Rounded.Schedule, "Time", dto.time)
                     }
-                    if (trip.notes.isNotBlank()) {
+                    if (dto.notes.isNotBlank()) {
                         Row {
-                            InfoRow(Icons.Rounded.Notes, "Notes", trip.notes)
+                            InfoRow(Icons.Rounded.Notes, "Notes", dto.notes)
                         }
                     }
                 }
             }
 
             // ── Earnings ──────────────────────────────────────────────────
-            if (trip.quotedAmount != null) {
+            if (dto.quotedAmount != null) {
                 Spacer(Modifier.height(20.dp))
                 Surface(
                     shape  = RoundedCornerShape(14.dp),
@@ -247,7 +279,7 @@ fun DriverTripDetailScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Trip Earnings", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                             GradientText(
-                                text   = "R${String.format("%.2f", trip.quotedAmount)}",
+                                text   = "R${String.format("%.2f", dto.quotedAmount)}",
                                 style  = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                                 colors = listOf(KntYellow, KntOrange),
                             )
@@ -264,10 +296,10 @@ fun DriverTripDetailScreen(
             Spacer(Modifier.height(28.dp))
 
             when (currentStatus) {
-                TripStatus.CONFIRMED, TripStatus.QUOTE_ACCEPTED -> {
+                "CONFIRMED", "QUOTE_ACCEPTED" -> {
                     KntPrimaryButton(
                         text    = "Start Trip",
-                        onClick = { pendingStatus = TripStatus.IN_PROGRESS; showConfirmDialog = true },
+                        onClick = { pendingStatus = "IN_PROGRESS"; showConfirmDialog = true },
                         icon    = Icons.Rounded.PlayArrow,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -277,14 +309,14 @@ fun DriverTripDetailScreen(
                         icon    = Icons.Rounded.Cancel,
                     )
                 }
-                TripStatus.IN_PROGRESS -> {
+                "IN_PROGRESS" -> {
                     KntPrimaryButton(
                         text    = "Complete Trip",
-                        onClick = { pendingStatus = TripStatus.COMPLETED; showConfirmDialog = true },
+                        onClick = { pendingStatus = "COMPLETED"; showConfirmDialog = true },
                         icon    = Icons.Rounded.CheckCircle,
                     )
                 }
-                TripStatus.COMPLETED -> {
+                "COMPLETED" -> {
                     Surface(
                         shape    = RoundedCornerShape(14.dp),
                         color    = StatusGreen.copy(0.1f),
@@ -298,7 +330,7 @@ fun DriverTripDetailScreen(
                         }
                     }
                 }
-                TripStatus.CANCELLED -> {
+                "CANCELLED" -> {
                     Surface(
                         shape    = RoundedCornerShape(14.dp),
                         color    = StatusRed.copy(0.1f),

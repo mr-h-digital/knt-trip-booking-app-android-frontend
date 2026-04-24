@@ -3,6 +3,7 @@ package com.kntransport.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kntransport.app.network.*
+import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.repository.AdminRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -136,6 +137,18 @@ class AdminViewModel : ViewModel() {
         }
     }
 
+    private val _reactivateState = MutableStateFlow<ApiResult<VehicleDto>?>(null)
+    val reactivateState: StateFlow<ApiResult<VehicleDto>?> = _reactivateState
+
+    fun reactivateVehicle(id: String) {
+        viewModelScope.launch {
+            _reactivateState.value = ApiResult.Loading
+            _reactivateState.value = repo.reactivateVehicle(id)
+        }
+    }
+
+    fun resetReactivateState() { _reactivateState.value = null }
+
     fun assignVehicle(driverId: String, vehicleId: String?) {
         viewModelScope.launch {
             repo.assignVehicle(driverId, vehicleId)
@@ -143,8 +156,32 @@ class AdminViewModel : ViewModel() {
         }
     }
 
+    fun uploadVehiclePhoto(id: String, file: java.io.File) {
+        viewModelScope.launch {
+            _vehicleActionState.value = ApiResult.Loading
+            _vehicleActionState.value = repo.uploadVehiclePhoto(id, file)
+        }
+    }
+
     fun resetVehicleActionState() { _vehicleActionState.value = null }
     fun resetDeactivateState()    { _deactivateState.value = null }
+
+    // ── Trips ─────────────────────────────────────────────────────────────────
+
+    private val _allTrips = MutableStateFlow<ApiResult<List<TripBookingDto>>>(ApiResult.Loading)
+    val allTrips: StateFlow<ApiResult<List<TripBookingDto>>> = _allTrips
+
+    fun loadAllTrips() {
+        viewModelScope.launch {
+            _allTrips.value = ApiResult.Loading
+            val result = repo.listAllTrips()
+            _allTrips.value = when (result) {
+                is ApiResult.Success -> ApiResult.Success(result.data.content)
+                is ApiResult.Error   -> result
+                ApiResult.Loading    -> ApiResult.Loading
+            }
+        }
+    }
 
     // ── Analytics ─────────────────────────────────────────────────────────────
 
