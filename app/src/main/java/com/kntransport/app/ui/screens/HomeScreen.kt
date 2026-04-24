@@ -24,12 +24,13 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun HomeScreen(
-    onBookTrip     : () -> Unit,
-    onMyTrips      : () -> Unit,
-    onLiftClubs    : () -> Unit,
-    onNotifications: () -> Unit,
-    onProfile      : () -> Unit,
-    onTripDetail   : (String) -> Unit,
+    onBookTrip      : () -> Unit,
+    onMyTrips       : () -> Unit,
+    onLiftClubs     : () -> Unit,
+    onLiftClubDetail: (String) -> Unit,
+    onNotifications : () -> Unit,
+    onProfile       : () -> Unit,
+    onTripDetail    : (String) -> Unit,
 ) {
     val c = LocalAppColors.current
     var selectedTab by remember { mutableStateOf(KntNavTab.HOME) }
@@ -358,7 +359,7 @@ fun HomeScreen(
                 } else {
                     SampleData.liftClubs.take(2).forEachIndexed { idx, club ->
                         StaggeredItem(index = idx + 2) {
-                            LiftClubSummaryCard(club = club, onClick = {})
+                            LiftClubSummaryCard(club = club, onClick = { onLiftClubDetail(club.id) })
                         }
                     }
                 }

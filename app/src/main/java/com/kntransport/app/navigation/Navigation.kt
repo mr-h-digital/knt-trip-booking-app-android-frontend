@@ -148,6 +148,7 @@ fun KntNavHost(
                 onBookTrip        = { navController.navigate(Routes.BOOK_TRIP) },
                 onMyTrips         = { navController.navigate(Routes.MY_TRIPS) },
                 onLiftClubs       = { navController.navigate(Routes.LIFT_CLUBS) },
+                onLiftClubDetail  = { id -> navController.navigate(Routes.liftClubDetail(id)) },
                 onNotifications   = { navController.navigate(Routes.NOTIFICATIONS) },
                 onProfile         = { navController.navigate(Routes.PROFILE) },
                 onTripDetail      = { id -> navController.navigate(Routes.tripDetail(id)) },

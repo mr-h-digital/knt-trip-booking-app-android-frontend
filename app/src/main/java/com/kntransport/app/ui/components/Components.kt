@@ -172,6 +172,199 @@ fun UserAvatar(
     }
 }
 
+// ── Cancel trip bottom sheet ──────────────────────────────────────────────────
+
+val COMMUTER_CANCEL_REASONS = listOf(
+    "Change of plans",
+    "Found alternative transport",
+    "Booked by mistake",
+    "Pick-up time no longer suitable",
+    "Other",
+)
+
+val DRIVER_CANCEL_REASONS = listOf(
+    "Vehicle breakdown",
+    "Unable to reach pickup location",
+    "Medical emergency",
+    "Trip route not feasible",
+    "Other",
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CancelTripSheet(
+    reasons   : List<String>,
+    onDismiss : () -> Unit,
+    onConfirm : (reason: String, note: String) -> Unit,
+) {
+    val c = LocalAppColors.current
+    var selected by remember { mutableStateOf<String?>(null) }
+    var note     by remember { mutableStateOf("") }
+    val isOther  = selected == "Other"
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = c.surface1,
+        dragHandle = {
+            Box(
+                Modifier.padding(vertical = 10.dp).width(36.dp).height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)).background(c.borderColor)
+            )
+        },
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                        .background(StatusRed.copy(0.12f)),
+                    Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.Cancel, null, tint = StatusRed, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Cancel Trip",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = c.textBright,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Please select a reason for cancelling.",
+                style = MaterialTheme.typography.bodySmall,
+                color = c.textMuted,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            reasons.forEach { reason ->
+                val sel = reason == selected
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (sel) StatusRed.copy(0.08f)
+                            else     c.surface2.copy(0.6f)
+                        )
+                        .border(
+                            1.dp,
+                            if (sel) StatusRed.copy(0.45f) else c.borderColor,
+                            RoundedCornerShape(12.dp),
+                        )
+                        .clickable { selected = reason }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = sel,
+                        onClick  = { selected = reason },
+                        colors   = RadioButtonDefaults.colors(
+                            selectedColor   = StatusRed,
+                            unselectedColor = c.textDim,
+                        ),
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        reason,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (sel) c.textBright else c.textMuted,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            AnimatedVisibility(
+                visible = isOther,
+                enter   = expandVertically(tween(220)) + fadeIn(tween(220)),
+                exit    = shrinkVertically(tween(180)) + fadeOut(tween(180)),
+            ) {
+                Column {
+                    OutlinedTextField(
+                        value         = note,
+                        onValueChange = { note = it },
+                        label         = { Text("Additional details (optional)", style = MaterialTheme.typography.bodySmall) },
+                        placeholder   = { Text("Describe your reason…", style = MaterialTheme.typography.bodySmall) },
+                        minLines      = 3,
+                        maxLines      = 5,
+                        modifier      = Modifier.fillMaxWidth(),
+                        shape         = RoundedCornerShape(12.dp),
+                        colors        = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor      = StatusRed.copy(0.6f),
+                            unfocusedBorderColor    = c.borderColor,
+                            focusedLabelColor       = StatusRed,
+                            unfocusedLabelColor     = c.textMuted,
+                            focusedTextColor        = c.textBright,
+                            unfocusedTextColor      = c.textBright,
+                            cursorColor             = StatusRed,
+                            focusedContainerColor   = c.surface2,
+                            unfocusedContainerColor = c.surface2,
+                        ),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+
+            Button(
+                onClick  = { selected?.let { onConfirm(it, note.trim()) } },
+                enabled  = selected != null,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor         = StatusRed,
+                    contentColor           = Color.White,
+                    disabledContainerColor = StatusRed.copy(0.3f),
+                    disabledContentColor   = Color.White.copy(0.5f),
+                ),
+            ) {
+                Icon(Icons.Rounded.Cancel, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Confirm Cancellation", style = MaterialTheme.typography.labelLarge)
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Keep Trip", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
+            }
+        }
+    }
+}
+
+// ── Vehicle photo avatar — photo if URL set, else icon placeholder ────────────
+
+@Composable
+fun VehiclePhotoAvatar(
+    photoUrl : String?,
+    size     : Dp = 56.dp,
+    modifier : Modifier = Modifier,
+    shape    : Shape = RoundedCornerShape((size.value * 0.22f).dp),
+) {
+    val c = LocalAppColors.current
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(c.yellow.copy(0.12f))
+            .border(1.dp, Brush.linearGradient(listOf(KntYellow.copy(0.5f), KntBlueBright.copy(0.3f))), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!photoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model              = ImageRequest.Builder(LocalContext.current).data(photoUrl).build(),
+                contentDescription = "Vehicle photo",
+                contentScale       = ContentScale.Crop,
+                modifier           = Modifier.fillMaxSize(),
+            )
+        } else {
+            Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(size * 0.48f))
+        }
+    }
+}
+
 // ── Photo picker bottom sheet ─────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,6 +374,7 @@ fun PhotoPickerSheet(
     onGallery   : () -> Unit,
     onCamera    : () -> Unit,
     onRemove    : (() -> Unit)? = null,
+    title       : String = "Update Profile Photo",
 ) {
     val c = LocalAppColors.current
     ModalBottomSheet(
@@ -195,7 +389,7 @@ fun PhotoPickerSheet(
     ) {
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
             Text(
-                "Update Profile Photo",
+                title,
                 style    = MaterialTheme.typography.titleMedium,
                 color    = c.textBright,
                 modifier = Modifier.padding(bottom = 20.dp),

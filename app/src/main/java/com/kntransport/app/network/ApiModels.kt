@@ -183,6 +183,78 @@ data class DriverEarningsDto(
     @SerializedName("averageEarningsPerTrip") val averageEarningsPerTrip : Double,
 )
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+data class AdminUserRequest(
+    @SerializedName("name")     val name     : String,
+    @SerializedName("email")    val email    : String,
+    @SerializedName("phone")    val phone    : String,
+    @SerializedName("password") val password : String? = null,
+    @SerializedName("role")     val role     : String,
+)
+
+data class AssignDriverRequest(
+    @SerializedName("driverId") val driverId : String,
+)
+
+data class AnalyticsDto(
+    @SerializedName("totalUsers")          val totalUsers          : Long = 0,
+    @SerializedName("totalCommuters")      val totalCommuters      : Long = 0,
+    @SerializedName("totalDrivers")        val totalDrivers        : Long = 0,
+    @SerializedName("totalTrips")          val totalTrips          : Long = 0,
+    @SerializedName("pendingQuoteTrips")   val pendingQuoteTrips   : Long = 0,
+    @SerializedName("confirmedTrips")      val confirmedTrips      : Long = 0,
+    @SerializedName("completedTrips")      val completedTrips      : Long = 0,
+    @SerializedName("cancelledTrips")      val cancelledTrips      : Long = 0,
+    @SerializedName("totalLiftClubs")      val totalLiftClubs      : Long = 0,
+    @SerializedName("openLiftClubs")       val openLiftClubs       : Long = 0,
+    @SerializedName("activeLiftClubs")     val activeLiftClubs     : Long = 0,
+    @SerializedName("totalRevenue")        val totalRevenue        : Double = 0.0,
+    @SerializedName("totalOutstanding")    val totalOutstanding    : Double = 0.0,
+    @SerializedName("averageTripValue")    val averageTripValue    : Double = 0.0,
+    @SerializedName("revenueByMonth")      val revenueByMonth      : List<MonthlyRevenue> = emptyList(),
+    @SerializedName("tripStatusBreakdown") val tripStatusBreakdown : List<TripStatusBreakdown> = emptyList(),
+) {
+    data class MonthlyRevenue(
+        @SerializedName("month")     val month     : String,
+        @SerializedName("revenue")   val revenue   : Double,
+        @SerializedName("tripCount") val tripCount : Long,
+    )
+    data class TripStatusBreakdown(
+        @SerializedName("status")     val status     : String,
+        @SerializedName("count")      val count      : Long,
+        @SerializedName("percentage") val percentage : Double,
+    )
+}
+
+data class FinancialReportDto(
+    @SerializedName("reportFrom")          val reportFrom          : String = "",
+    @SerializedName("reportTo")            val reportTo            : String = "",
+    @SerializedName("generatedAt")         val generatedAt         : String = "",
+    @SerializedName("generatedBy")         val generatedBy         : String = "",
+    @SerializedName("grossRevenue")        val grossRevenue        : Double = 0.0,
+    @SerializedName("invoiceCount")        val invoiceCount        : Long = 0,
+    @SerializedName("averageInvoiceValue") val averageInvoiceValue : Double = 0.0,
+    @SerializedName("highestInvoiceValue") val highestInvoiceValue : Double = 0.0,
+    @SerializedName("lowestInvoiceValue")  val lowestInvoiceValue  : Double = 0.0,
+    @SerializedName("onceOffRevenue")      val onceOffRevenue      : Double = 0.0,
+    @SerializedName("weeklyRevenue")       val weeklyRevenue       : Double = 0.0,
+    @SerializedName("fortnightlyRevenue")  val fortnightlyRevenue  : Double = 0.0,
+    @SerializedName("monthlyRevenue")      val monthlyRevenue      : Double = 0.0,
+    @SerializedName("lineItems")           val lineItems           : List<LineItem> = emptyList(),
+) {
+    data class LineItem(
+        @SerializedName("date")          val date          : String,
+        @SerializedName("referenceType") val referenceType : String,
+        @SerializedName("referenceId")   val referenceId   : String,
+        @SerializedName("clientName")    val clientName    : String,
+        @SerializedName("clientPhone")   val clientPhone   : String,
+        @SerializedName("paymentCycle")  val paymentCycle  : String,
+        @SerializedName("amount")        val amount        : Double,
+        @SerializedName("accepted")      val accepted      : Boolean,
+    )
+}
+
 // ── Generic wrapper ───────────────────────────────────────────────────────────
 
 data class ApiError(

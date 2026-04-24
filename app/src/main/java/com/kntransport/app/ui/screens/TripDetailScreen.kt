@@ -12,10 +12,12 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.*
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.kntransport.app.data.*
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -59,10 +61,24 @@ fun TripDetailScreen(
     }
     val fmt = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")
 
+    var currentStatus  by remember { mutableStateOf(trip.status) }
+    var showCancelSheet by remember { mutableStateOf(false) }
+
+    if (showCancelSheet) {
+        CancelTripSheet(
+            reasons   = COMMUTER_CANCEL_REASONS,
+            onDismiss = { showCancelSheet = false },
+            onConfirm = { _, _ ->
+                currentStatus = TripStatus.CANCELLED
+                showCancelSheet = false
+            },
+        )
+    }
+
     // Live countdown for confirmed/in-progress trips
     var countdownText by remember { mutableStateOf("") }
     LaunchedEffect(trip.id) {
-        if (trip.status in listOf(TripStatus.CONFIRMED, TripStatus.IN_PROGRESS)) {
+        if (currentStatus in listOf(TripStatus.CONFIRMED, TripStatus.IN_PROGRESS)) {
             val pickupDateTime = LocalDateTime.of(trip.date, trip.time)
             while (true) {
                 val now  = LocalDateTime.now()
@@ -92,7 +108,7 @@ fun TripDetailScreen(
 
             // ── Countdown banner ──────────────────────────────────────────
             if (countdownText.isNotEmpty()) {
-                val isEnRoute = trip.status == TripStatus.IN_PROGRESS
+                val isEnRoute = currentStatus == TripStatus.IN_PROGRESS
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -130,8 +146,8 @@ fun TripDetailScreen(
             }
 
             // ── Status pipeline ───────────────────────────────────────────
-            if (trip.status != TripStatus.CANCELLED) {
-                TripStatusPipeline(currentStatus = trip.status)
+            if (currentStatus != TripStatus.CANCELLED) {
+                TripStatusPipeline(currentStatus = currentStatus)
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -143,7 +159,7 @@ fun TripDetailScreen(
                         Spacer(Modifier.height(2.dp))
                         Text(trip.date.format(fmt), style = MaterialTheme.typography.titleMedium, color = c.textBright)
                     }
-                    TripStatusChip(trip.status)
+                    TripStatusChip(currentStatus)
                 }
                 KntDivider()
                 InfoRow(Icons.Rounded.LocationOn, "Pickup",     trip.pickupAddress)
@@ -153,7 +169,7 @@ fun TripDetailScreen(
             }
 
             // ── Quote card ────────────────────────────────────────────────
-            if (trip.quotedAmount != null && trip.status == TripStatus.QUOTE_SENT) {
+            if (trip.quotedAmount != null && currentStatus == TripStatus.QUOTE_SENT) {
                 Spacer(Modifier.height(16.dp))
                 Surface(
                     shape    = RoundedCornerShape(16.dp),
@@ -184,17 +200,27 @@ fun TripDetailScreen(
                 SectionHeader(title = "Your Driver")
                 KntCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Driver avatar — real photo if available, else initials
                         Box(
                             Modifier.size(48.dp).clip(CircleShape).background(c.blue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            val initials = trip.driverName.split(" ")
-                                .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
-                            if (initials.isNotEmpty()) {
-                                Text(initials, style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = c.blue)
+                            if (!trip.driverAvatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model              = ImageRequest.Builder(LocalContext.current).data(trip.driverAvatarUrl).build(),
+                                    contentDescription = trip.driverName,
+                                    contentScale       = ContentScale.Crop,
+                                    modifier           = Modifier.fillMaxSize().clip(CircleShape),
+                                )
                             } else {
-                                Icon(Icons.Rounded.Person, null, tint = c.blue, modifier = Modifier.size(26.dp))
+                                val initials = trip.driverName.split(" ")
+                                    .mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
+                                if (initials.isNotEmpty()) {
+                                    Text(initials, style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = c.blue)
+                                } else {
+                                    Icon(Icons.Rounded.Person, null, tint = c.blue, modifier = Modifier.size(26.dp))
+                                }
                             }
                         }
                         Spacer(Modifier.width(12.dp))
@@ -203,10 +229,9 @@ fun TripDetailScreen(
                             Text("K&T Transport Driver", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                         }
                     }
-                    // ── Vehicle card (Uber-style) ─────────────────────────
+                    // ── Vehicle card ──────────────────────────────────────
                     if (trip.vehicleInfo != null || trip.vehiclePlate != null) {
                         KntDivider()
-                        val vehicle = SampleData.driverTrips.find { it.id == trip.id }
                         val vehicleDisplay = trip.vehicleInfo ?: ""
                         val plateDisplay   = trip.vehiclePlate ?: ""
                         Surface(
@@ -219,13 +244,11 @@ fun TripDetailScreen(
                                 Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Box(
-                                    Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
-                                        .background(c.yellow.copy(0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(20.dp))
-                                }
+                                VehiclePhotoAvatar(
+                                    photoUrl = trip.vehiclePhotoUrl,
+                                    size     = 40.dp,
+                                    shape    = RoundedCornerShape(10.dp),
+                                )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(vehicleDisplay, style = MaterialTheme.typography.titleSmall, color = c.textBright)
@@ -252,8 +275,48 @@ fun TripDetailScreen(
                 }
             }
 
+            // ── Cancel button ─────────────────────────────────────────────
+            val cancellable = currentStatus in listOf(
+                TripStatus.PENDING_QUOTE, TripStatus.QUOTE_SENT,
+                TripStatus.QUOTE_ACCEPTED, TripStatus.CONFIRMED,
+            )
+            if (cancellable) {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick  = { showCancelSheet = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = StatusRed.copy(alpha = 0.12f),
+                        contentColor   = StatusRed,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp),
+                ) {
+                    Icon(Icons.Rounded.Cancel, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cancel Trip", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            // ── Cancelled banner ──────────────────────────────────────────
+            if (currentStatus == TripStatus.CANCELLED) {
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    shape    = RoundedCornerShape(14.dp),
+                    color    = StatusRed.copy(0.1f),
+                    border   = BorderStroke(1.dp, StatusRed.copy(0.3f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Cancel, null, tint = StatusRed, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text("This trip has been cancelled.", style = MaterialTheme.typography.bodyMedium, color = StatusRed)
+                    }
+                }
+            }
+
             // ── Receipt ───────────────────────────────────────────────────
-            if (trip.status == TripStatus.COMPLETED && trip.quotedAmount != null) {
+            if (currentStatus == TripStatus.COMPLETED && trip.quotedAmount != null) {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(title = "Receipt")
                 KntCard {

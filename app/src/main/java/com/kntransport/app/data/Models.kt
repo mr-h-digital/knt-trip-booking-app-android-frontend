@@ -36,9 +36,11 @@ data class TripBooking(
     val notes        : String = "",
     val status       : TripStatus = TripStatus.PENDING_QUOTE,
     val quotedAmount : Double? = null,
-    val driverName   : String? = null,
-    val vehicleInfo  : String? = null,
-    val vehiclePlate : String? = null,
+    val driverName      : String? = null,
+    val driverAvatarUrl : String? = null,
+    val vehicleInfo     : String? = null,
+    val vehiclePlate    : String? = null,
+    val vehiclePhotoUrl : String? = null,
 )
 
 // ── Lift Club ─────────────────────────────────────────────────────────────────

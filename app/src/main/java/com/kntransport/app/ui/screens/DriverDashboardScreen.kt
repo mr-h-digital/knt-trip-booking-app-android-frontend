@@ -261,13 +261,11 @@ fun DriverDashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
-                                    .background(c.yellow.copy(0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(24.dp))
-                            }
+                            VehiclePhotoAvatar(
+                                photoUrl = assignedVehicle.photoUrl,
+                                size     = 48.dp,
+                                shape    = RoundedCornerShape(12.dp),
+                            )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(

@@ -118,19 +118,11 @@ fun VehicleCard(vehicle: Vehicle, onClick: () -> Unit) {
 
     KntCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
-                    .background(c.blue.copy(0.12f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    when (vehicle.vehicleType.name) {
-                        "SEDAN", "SUV" -> Icons.Rounded.DirectionsCar
-                        else           -> Icons.Rounded.DirectionsBus
-                    },
-                    null, tint = c.blue, modifier = Modifier.size(24.dp),
-                )
-            }
+            VehiclePhotoAvatar(
+                photoUrl = vehicle.photoUrl,
+                size     = 48.dp,
+                shape    = RoundedCornerShape(12.dp),
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(

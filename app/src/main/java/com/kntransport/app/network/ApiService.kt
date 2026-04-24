@@ -63,9 +63,33 @@ interface ApiService {
         @Body request: QuoteAcceptRequest,
     ): Response<QuoteDto>
 
+    // ── Admin — Users ─────────────────────────────────────────────────────────
+    @GET("api/admin/users")
+    suspend fun adminListUsers(
+        @Query("role") role: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50,
+    ): Response<PagedResponse<UserDto>>
+
+    @GET("api/admin/users/{id}")
+    suspend fun adminGetUser(@Path("id") id: String): Response<UserDto>
+
+    @POST("api/admin/users")
+    suspend fun adminCreateUser(@Body request: AdminUserRequest): Response<UserDto>
+
+    @PUT("api/admin/users/{id}")
+    suspend fun adminUpdateUser(@Path("id") id: String, @Body request: AdminUserRequest): Response<UserDto>
+
+    @DELETE("api/admin/users/{id}")
+    suspend fun adminDeleteUser(@Path("id") id: String): Response<Unit>
+
     // ── Admin — Fleet ─────────────────────────────────────────────────────────
     @GET("api/admin/vehicles")
-    suspend fun getVehicles(@Query("active") active: Boolean? = null): Response<List<VehicleDto>>
+    suspend fun getVehicles(
+        @Query("active") active: Boolean? = null,
+        @Query("page")   page: Int = 0,
+        @Query("size")   size: Int = 50,
+    ): Response<PagedResponse<VehicleDto>>
 
     @GET("api/admin/vehicles/{id}")
     suspend fun getVehicle(@Path("id") id: String): Response<VehicleDto>
@@ -79,8 +103,35 @@ interface ApiService {
     @DELETE("api/admin/vehicles/{id}")
     suspend fun deactivateVehicle(@Path("id") id: String): Response<Unit>
 
+    @Multipart
+    @POST("api/admin/vehicles/{id}/photo")
+    suspend fun uploadVehiclePhoto(
+        @Path("id") id: String,
+        @Part photo: MultipartBody.Part,
+    ): Response<VehicleDto>
+
     @PATCH("api/admin/drivers/{driverId}/assign-vehicle")
     suspend fun assignVehicle(@Path("driverId") driverId: String, @Body request: AssignVehicleRequest): Response<UserDto>
+
+    // ── Admin — Trips ─────────────────────────────────────────────────────────
+    @GET("api/admin/trips")
+    suspend fun adminListTrips(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50,
+    ): Response<PagedResponse<TripBookingDto>>
+
+    @PATCH("api/admin/trips/{tripId}/assign-driver")
+    suspend fun adminAssignDriver(@Path("tripId") tripId: String, @Body request: AssignDriverRequest): Response<TripBookingDto>
+
+    // ── Admin — Analytics & Financials ────────────────────────────────────────
+    @GET("api/admin/analytics")
+    suspend fun getAnalytics(): Response<AnalyticsDto>
+
+    @GET("api/admin/financial-report")
+    suspend fun getFinancialReport(
+        @Query("from") from: String = "",
+        @Query("to")   to: String = "",
+    ): Response<FinancialReportDto>
 
     // ── Driver API ─────────────────────────────────────────────────────────────
     @GET("api/driver/trips")

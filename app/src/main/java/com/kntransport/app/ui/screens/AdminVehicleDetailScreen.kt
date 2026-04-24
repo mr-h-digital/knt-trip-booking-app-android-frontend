@@ -10,8 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.kntransport.app.R
 import com.kntransport.app.data.SampleData
 import com.kntransport.app.data.Vehicle
@@ -77,11 +81,27 @@ fun AdminVehicleDetailScreen(
             modifier = Modifier.fillMaxSize().padding(pv).verticalScroll(rememberScrollState()),
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(140.dp)
+                modifier = Modifier.fillMaxWidth().height(160.dp)
                     .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                HeroBgImage(resId = R.drawable.hero_bg_4, modifier = Modifier.fillMaxSize(), darkOverlay = 0.58f)
+                if (!vehicle.photoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model              = ImageRequest.Builder(LocalContext.current).data(vehicle.photoUrl).build(),
+                        contentDescription = "${vehicle.make} ${vehicle.model}",
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(Color.Black.copy(0.25f), Color.Black.copy(0.65f))
+                            )
+                        )
+                    )
+                } else {
+                    HeroBgImage(resId = R.drawable.hero_bg_4, modifier = Modifier.fillMaxSize(), darkOverlay = 0.58f)
+                }
                 Column(
                     Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 14.dp),
                 ) {

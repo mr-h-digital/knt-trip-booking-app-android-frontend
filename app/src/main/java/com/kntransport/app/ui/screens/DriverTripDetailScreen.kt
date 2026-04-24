@@ -34,11 +34,23 @@ fun DriverTripDetailScreen(
     }
 
     var currentStatus by remember { mutableStateOf(trip.status) }
-    var showConfirmDialog by remember { mutableStateOf(false) }
-    var pendingStatus     by remember { mutableStateOf<TripStatus?>(null) }
+    var showConfirmDialog  by remember { mutableStateOf(false) }
+    var showCancelSheet    by remember { mutableStateOf(false) }
+    var pendingStatus      by remember { mutableStateOf<TripStatus?>(null) }
 
     val dateFmt = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
     val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+
+    if (showCancelSheet) {
+        CancelTripSheet(
+            reasons   = DRIVER_CANCEL_REASONS,
+            onDismiss = { showCancelSheet = false },
+            onConfirm = { _, _ ->
+                currentStatus = TripStatus.CANCELLED
+                showCancelSheet = false
+            },
+        )
+    }
 
     if (showConfirmDialog && pendingStatus != null) {
         AlertDialog(
@@ -49,7 +61,6 @@ fun DriverTripDetailScreen(
                     when (pendingStatus) {
                         TripStatus.IN_PROGRESS -> "Start Trip?"
                         TripStatus.COMPLETED   -> "Complete Trip?"
-                        TripStatus.CANCELLED   -> "Cancel Trip?"
                         else -> "Update Status?"
                     },
                     style = MaterialTheme.typography.titleMedium,
@@ -61,7 +72,6 @@ fun DriverTripDetailScreen(
                     when (pendingStatus) {
                         TripStatus.IN_PROGRESS -> "Confirm that you have picked up ${trip.commuterName} and the trip has started."
                         TripStatus.COMPLETED   -> "Confirm that you have safely dropped off ${trip.commuterName} and the trip is complete."
-                        TripStatus.CANCELLED   -> "Are you sure you want to cancel this trip? The commuter will be notified."
                         else -> "Update the trip status?"
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -76,11 +86,7 @@ fun DriverTripDetailScreen(
                         pendingStatus    = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = when (pendingStatus) {
-                            TripStatus.CANCELLED -> StatusRed
-                            TripStatus.COMPLETED -> StatusGreen
-                            else                 -> c.blue
-                        }
+                        containerColor = if (pendingStatus == TripStatus.COMPLETED) StatusGreen else c.blue
                     ),
                 ) {
                     Text("Confirm")
@@ -267,7 +273,7 @@ fun DriverTripDetailScreen(
                     Spacer(Modifier.height(8.dp))
                     KntSecondaryButton(
                         text    = "Cancel Trip",
-                        onClick = { pendingStatus = TripStatus.CANCELLED; showConfirmDialog = true },
+                        onClick = { showCancelSheet = true },
                         icon    = Icons.Rounded.Cancel,
                     )
                 }
