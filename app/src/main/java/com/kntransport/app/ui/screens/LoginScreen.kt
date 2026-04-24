@@ -21,7 +21,6 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
-import com.kntransport.app.data.UserRole
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -33,7 +32,6 @@ fun LoginScreen(
     onLogin          : (role: String) -> Unit,
     onSignUp         : () -> Unit,
     onForgotPassword : () -> Unit = {},
-    onDemoLogin      : (UserRole) -> Unit = {},
     viewModel        : AuthViewModel = viewModel(),
 ) {
     val c          = LocalAppColors.current
@@ -242,51 +240,6 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(24.dp))
-
-                    // Divider — demo access
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        HorizontalDivider(Modifier.weight(1f), color = c.borderColor)
-                        Text(
-                            "  demo access  ",
-                            style = MaterialTheme.typography.bodySmall.copy(color = c.textDim),
-                        )
-                        HorizontalDivider(Modifier.weight(1f), color = c.borderColor)
-                    }
-
-                    Spacer(Modifier.height(14.dp))
-
-                    // Demo role buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        DemoRoleButton(
-                            label    = "Commuter",
-                            icon     = Icons.Rounded.DirectionsBus,
-                            tint     = KntBlue,
-                            onClick  = { onDemoLogin(UserRole.COMMUTER) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        DemoRoleButton(
-                            label    = "Driver",
-                            icon     = Icons.Rounded.LocalShipping,
-                            tint     = KntYellow,
-                            onClick  = { onDemoLogin(UserRole.DRIVER) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        DemoRoleButton(
-                            label    = "Admin",
-                            icon     = Icons.Rounded.AdminPanelSettings,
-                            tint     = KntOrange,
-                            onClick  = { onDemoLogin(UserRole.ADMIN) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
                     Spacer(Modifier.height(20.dp))
 
                     // Divider — create account
@@ -360,33 +313,3 @@ fun LoginScreen(
     } // Scaffold
 }
 
-@Composable
-private fun DemoRoleButton(
-    label   : String,
-    icon    : androidx.compose.ui.graphics.vector.ImageVector,
-    tint    : Color,
-    onClick : () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val c = LocalAppColors.current
-    OutlinedButton(
-        onClick  = onClick,
-        modifier = modifier.height(64.dp),
-        shape    = RoundedCornerShape(12.dp),
-        border   = BorderStroke(1.dp, tint.copy(alpha = 0.5f)),
-        colors   = ButtonDefaults.outlinedButtonColors(
-            containerColor = tint.copy(alpha = 0.08f),
-            contentColor   = tint,
-        ),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, modifier = Modifier.size(16.dp), tint = tint)
-            Spacer(Modifier.height(3.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = tint,
-            )
-        }
-    }
-}

@@ -10,8 +10,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.AppNotification
-import com.kntransport.app.data.SampleData
-import com.kntransport.app.data.UserRole
 import com.kntransport.app.network.UserDto
 import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.screens.*
@@ -118,21 +116,6 @@ fun KntNavHost(
                 },
                 onSignUp         = { navController.navigate(Routes.SIGN_UP) },
                 onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
-                onDemoLogin      = { role ->
-                    SampleData.currentUser = when (role) {
-                        UserRole.DRIVER -> SampleData.driverUser
-                        UserRole.ADMIN  -> SampleData.adminUser
-                        else            -> SampleData.currentUser
-                    }
-                    val dest = when (role) {
-                        UserRole.ADMIN  -> Routes.ADMIN_DASHBOARD
-                        UserRole.DRIVER -> Routes.DRIVER_DASHBOARD
-                        else            -> Routes.HOME
-                    }
-                    navController.navigate(dest) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
             )
         }
 
