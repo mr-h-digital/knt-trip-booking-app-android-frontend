@@ -50,4 +50,12 @@ class TripRepository {
 
     suspend fun getDriverEarnings() =
         safeApiCall { api.getDriverEarnings() }
+
+    // ── Live tracking ─────────────────────────────────────────────────────────
+
+    suspend fun getTripLocation(tripId: String) =
+        safeApiCall { api.getTripLocation(tripId) }
+
+    suspend fun updateDriverLocation(tripId: String, latitude: Double, longitude: Double) =
+        safeApiCall { api.updateDriverLocation(tripId, UpdateDriverLocationRequest(latitude, longitude)) }
 }

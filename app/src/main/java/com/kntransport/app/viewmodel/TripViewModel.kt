@@ -3,9 +3,12 @@ package com.kntransport.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.DriverLocationDto
 import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.repository.TripRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -31,6 +34,11 @@ class TripViewModel : ViewModel() {
 
     private val _quoteState = MutableStateFlow<ApiResult<QuoteDto>?>(null)
     val quoteState: StateFlow<ApiResult<QuoteDto>?> = _quoteState
+
+    private val _driverLocation = MutableStateFlow<DriverLocationDto?>(null)
+    val driverLocation: StateFlow<DriverLocationDto?> = _driverLocation
+
+    private var locationPollingJob: Job? = null
 
     fun loadTrips() {
         viewModelScope.launch {
@@ -84,6 +92,25 @@ class TripViewModel : ViewModel() {
             _quoteState.value = ApiResult.Loading
             _quoteState.value = repo.respondToQuote(id, accepted, paymentCycle)
         }
+    }
+
+    fun startLocationPolling(tripId: String) {
+        locationPollingJob?.cancel()
+        locationPollingJob = viewModelScope.launch {
+            while (true) {
+                val result = repo.getTripLocation(tripId)
+                if (result is ApiResult.Success) {
+                    _driverLocation.value = result.data
+                }
+                delay(5_000L)
+            }
+        }
+    }
+
+    fun stopLocationPolling() {
+        locationPollingJob?.cancel()
+        locationPollingJob = null
+        _driverLocation.value = null
     }
 
     fun resetCreateState() { _createState.value = null }

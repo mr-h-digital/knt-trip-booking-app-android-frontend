@@ -29,6 +29,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 // Ordered pipeline steps
 private val PIPELINE = listOf(
@@ -57,9 +58,10 @@ fun TripDetailScreen(
     onRateTrip   : (String) -> Unit = {},
     viewModel    : TripViewModel = viewModel(),
 ) {
-    val c            = LocalAppColors.current
-    val tripState   by viewModel.selectedTrip.collectAsState()
-    val cancelState by viewModel.cancelState.collectAsState()
+    val c               = LocalAppColors.current
+    val tripState      by viewModel.selectedTrip.collectAsState()
+    val cancelState    by viewModel.cancelState.collectAsState()
+    val driverLocation by viewModel.driverLocation.collectAsStateWithLifecycle()
 
     LaunchedEffect(tripId) { viewModel.loadTrip(tripId) }
 
@@ -112,6 +114,18 @@ fun TripDetailScreen(
                 showCancelSheet = false
             },
         )
+    }
+
+    // Start/stop location polling when the trip is in progress
+    LaunchedEffect(dto.id, currentStatus) {
+        if (currentStatus == "IN_PROGRESS") {
+            viewModel.startLocationPolling(dto.id)
+        } else {
+            viewModel.stopLocationPolling()
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopLocationPolling() }
     }
 
     // Live countdown for confirmed/in-progress trips
@@ -181,6 +195,16 @@ fun TripDetailScreen(
                         )
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // ── Live map tracking ─────────────────────────────────────────
+            if (currentStatus == "IN_PROGRESS") {
+                LiveTrackingMapCard(
+                    driverLocation = driverLocation,
+                    driverName     = dto.driverName,
+                    modifier       = Modifier,
+                )
                 Spacer(Modifier.height(16.dp))
             }
 

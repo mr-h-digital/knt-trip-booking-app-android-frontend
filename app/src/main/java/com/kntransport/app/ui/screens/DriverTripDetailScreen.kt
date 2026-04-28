@@ -1,5 +1,10 @@
 package com.kntransport.app.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,9 +17,17 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.kntransport.app.R
 import com.kntransport.app.data.*
 import com.kntransport.app.network.ApiResult
@@ -58,6 +71,42 @@ fun DriverTripDetailScreen(
     var showCancelSheet    by remember { mutableStateOf(false) }
     var pendingStatus      by remember { mutableStateOf<String?>(null) }
     var errorMessage       by remember { mutableStateOf<String?>(null) }
+
+    val isSharingLocation by viewModel.isSharingLocation.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Permission launcher for fine location
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) viewModel.startSharingLocation() }
+
+    // Wire GPS → ViewModel whenever location sharing is active and trip is IN_PROGRESS
+    @SuppressLint("MissingPermission")
+    fun startGpsUpdates() {
+        val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L).build()
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let { loc ->
+                    viewModel.broadcastLocation(dto.id, loc.latitude, loc.longitude)
+                }
+            }
+        }
+        fusedClient.requestLocationUpdates(request, callback, context.mainLooper)
+    }
+
+    LaunchedEffect(isSharingLocation, currentStatus) {
+        if (isSharingLocation && currentStatus == "IN_PROGRESS") {
+            val hasPerm = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasPerm) startGpsUpdates()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopSharingLocation() }
+    }
 
     LaunchedEffect(actionState) {
         when (val s = actionState) {
@@ -179,6 +228,25 @@ fun DriverTripDetailScreen(
                     Spacer(Modifier.width(10.dp))
                     Text(bannerLabel, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = bannerColor)
                 }
+            }
+
+            // ── Location sharing toggle (only visible while trip is active) ──
+            if (currentStatus == "IN_PROGRESS") {
+                Spacer(Modifier.height(12.dp))
+                DriverLocationSharingBadge(
+                    isSharing = isSharingLocation,
+                    onToggle  = {
+                        if (!isSharingLocation) {
+                            val hasPerm = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (hasPerm) viewModel.startSharingLocation()
+                            else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        } else {
+                            viewModel.stopSharingLocation()
+                        }
+                    },
+                )
             }
 
             Spacer(Modifier.height(20.dp))

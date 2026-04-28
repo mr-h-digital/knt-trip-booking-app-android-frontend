@@ -266,6 +266,20 @@ data class FinancialReportDto(
     )
 }
 
+// ── Driver location ───────────────────────────────────────────────────────────
+
+data class DriverLocationDto(
+    @SerializedName("tripId")    val tripId    : String,
+    @SerializedName("latitude")  val latitude  : Double,
+    @SerializedName("longitude") val longitude : Double,
+    @SerializedName("updatedAt") val updatedAt : String = "",
+)
+
+data class UpdateDriverLocationRequest(
+    @SerializedName("latitude")  val latitude  : Double,
+    @SerializedName("longitude") val longitude : Double,
+)
+
 // ── Generic wrapper ───────────────────────────────────────────────────────────
 
 data class ApiError(

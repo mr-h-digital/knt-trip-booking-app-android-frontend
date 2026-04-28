@@ -16,6 +16,14 @@ android {
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        // Load Maps API key from local.properties (add MAPS_API_KEY=<your_key> there)
+        val localProperties = java.util.Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.inputStream())
+        }
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
+
         // API base URL — override in local.properties or CI env var
         buildConfigField("String", "API_BASE_URL", "\"https://api.ktransport.co.za/\"")
         buildConfigField("String", "API_BASE_URL_DEV", "\"http://10.0.2.2:8080/\"")
@@ -103,6 +111,11 @@ dependencies {
 
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.4")
+
+    // Google Maps Compose + Location
+    implementation("com.google.maps.android:maps-compose:6.4.1")
+    implementation("com.google.android.gms:play-services-maps:19.2.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

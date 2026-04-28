@@ -142,6 +142,19 @@ interface ApiService {
         @Query("to")   to: String = "",
     ): Response<FinancialReportDto>
 
+    // ── Live tracking ─────────────────────────────────────────────────────────
+
+    /** Commuter polls this to get the driver's latest position during a trip. */
+    @GET("api/trips/{id}/location")
+    suspend fun getTripLocation(@Path("id") id: String): Response<DriverLocationDto>
+
+    /** Driver pushes their GPS position periodically while a trip is IN_PROGRESS. */
+    @PUT("api/driver/trips/{id}/location")
+    suspend fun updateDriverLocation(
+        @Path("id") id: String,
+        @Body request: UpdateDriverLocationRequest,
+    ): Response<Unit>
+
     // ── Driver API ─────────────────────────────────────────────────────────────
     @GET("api/driver/trips")
     suspend fun getDriverTrips(

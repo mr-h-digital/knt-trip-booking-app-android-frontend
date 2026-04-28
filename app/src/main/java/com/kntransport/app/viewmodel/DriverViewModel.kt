@@ -6,6 +6,8 @@ import com.kntransport.app.network.ApiResult
 import com.kntransport.app.network.DriverEarningsDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.repository.TripRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -59,6 +61,29 @@ class DriverViewModel : ViewModel() {
     }
 
     fun resetTripActionState() { _tripActionState.value = null }
+
+    // ── Live location sharing ─────────────────────────────────────────────────
+
+    private val _isSharingLocation = MutableStateFlow(false)
+    val isSharingLocation: StateFlow<Boolean> = _isSharingLocation
+
+    private var locationBroadcastJob: Job? = null
+
+    /** Called by the driver screen every time a new GPS fix arrives. */
+    fun broadcastLocation(tripId: String, latitude: Double, longitude: Double) {
+        if (!_isSharingLocation.value) return
+        viewModelScope.launch {
+            repo.updateDriverLocation(tripId, latitude, longitude)
+        }
+    }
+
+    fun startSharingLocation() { _isSharingLocation.value = true }
+
+    fun stopSharingLocation() {
+        _isSharingLocation.value = false
+        locationBroadcastJob?.cancel()
+        locationBroadcastJob = null
+    }
 
     // ── Earnings ──────────────────────────────────────────────────────────────
 
