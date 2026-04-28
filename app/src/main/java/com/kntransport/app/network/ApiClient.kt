@@ -39,9 +39,9 @@ object ApiClient {
         val clientBuilder = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tm))
             .addInterceptor(logging)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .writeTimeout(20, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
 
         // Trust all certificates in debug builds to work around Railway's
         // certificate chain not being fully trusted by Android's CA store.

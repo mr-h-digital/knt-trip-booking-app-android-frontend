@@ -18,14 +18,25 @@ suspend fun <T> safeApiCall(call: suspend () -> Response<T>): ApiResult<T> {
             if (body != null) ApiResult.Success(body)
             else ApiResult.Error("Empty response body", response.code())
         } else {
-            val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+            val errorMsg = parseErrorMessage(response.errorBody()?.string(), response.code())
             ApiResult.Error(errorMsg, response.code())
         }
     } catch (e: java.net.UnknownHostException) {
         ApiResult.Error("No internet connection")
     } catch (e: java.net.SocketTimeoutException) {
-        ApiResult.Error("Request timed out")
+        ApiResult.Error("Server is taking too long to respond. Please try again.")
     } catch (e: Exception) {
         ApiResult.Error(e.localizedMessage ?: "Unexpected error")
+    }
+}
+
+private fun parseErrorMessage(errorBody: String?, code: Int): String {
+    if (errorBody.isNullOrBlank()) return "Error $code"
+    return try {
+        // Extract the "message" field from {"message":"...","status":...}
+        val match = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+        match?.groupValues?.get(1) ?: errorBody
+    } catch (_: Exception) {
+        errorBody
     }
 }
