@@ -239,7 +239,7 @@ fun HomeScreen(
                 if (avatarSize > 8.dp) {
                     UserAvatar(
                         name      = displayName,
-                        avatarUri = null,
+                        avatarUrl = (profileState as? ApiResult.Success)?.data?.avatarUrl,
                         size      = avatarSize,
                         onClick   = onProfile,
                         modifier  = Modifier

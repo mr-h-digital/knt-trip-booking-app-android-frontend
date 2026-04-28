@@ -131,28 +131,38 @@ fun KntLogoBadge(modifier: Modifier = Modifier, size: Dp = 56.dp) {
 
 @Composable
 fun UserAvatar(
-    name     : String,
-    avatarUri: Uri?,
-    size     : Dp = 72.dp,
-    modifier : Modifier = Modifier,
-    onClick  : (() -> Unit)? = null,
+    name      : String,
+    avatarUri : Uri?    = null,
+    avatarUrl : String? = null,
+    size      : Dp = 72.dp,
+    modifier  : Modifier = Modifier,
+    onClick   : (() -> Unit)? = null,
 ) {
-    val c         = LocalAppColors.current
-    val initials  = name.split(" ").mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString("")
-    // Border colour matches the screen background so the ring blends seamlessly
-    // into whatever is behind the avatar — white in light mode, near-black in dark.
+    val c        = LocalAppColors.current
+    val context  = LocalContext.current
+    val initials = name.split(" ").mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString("")
     val borderColor = c.bgDeep
-    val baseMod   = modifier
+    val baseMod  = modifier
         .size(size)
         .border(4.dp, borderColor, CircleShape)
         .clip(CircleShape)
         .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
 
+    // Resolve the image source: local pick takes priority, then persisted URL.
+    val imageData: Any? = when {
+        avatarUri != null  -> avatarUri
+        !avatarUrl.isNullOrBlank() -> {
+            val baseUrl = com.kntransport.app.BuildConfig.ACTIVE_API_URL.trimEnd('/')
+            if (avatarUrl.startsWith("http")) avatarUrl else "$baseUrl$avatarUrl"
+        }
+        else -> null
+    }
+
     Box(baseMod, contentAlignment = Alignment.Center) {
-        if (avatarUri != null) {
+        if (imageData != null) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(avatarUri)
+                model = ImageRequest.Builder(context)
+                    .data(imageData)
                     .build(),
                 contentDescription = name,
                 contentScale       = ContentScale.Crop,

@@ -102,7 +102,7 @@ fun EditProfileScreen(
 
     val doSave = {
         if (pendingAvatarUri != null) {
-            viewModel.uploadAvatar(context, pendingAvatarUri!!)
+            viewModel.uploadAvatarWithProfile(context, pendingAvatarUri!!, name.trim(), email.trim(), phone.trim())
         } else {
             viewModel.updateProfile(name.trim(), email.trim(), phone.trim())
         }
@@ -189,6 +189,7 @@ fun EditProfileScreen(
                         UserAvatar(
                             name      = name.ifBlank { apiUser?.name ?: "" },
                             avatarUri = pendingAvatarUri,
+                            avatarUrl = if (pendingAvatarUri == null) apiUser?.avatarUrl else null,
                             size      = 88.dp,
                             onClick   = { showPhotoSheet = true },
                         )

@@ -95,7 +95,7 @@ fun ProfileScreen(
                     Box(contentAlignment = Alignment.BottomEnd) {
                         UserAvatar(
                             name      = name,
-                            avatarUri = null,
+                            avatarUrl = apiUser?.avatarUrl,
                             size      = 88.dp,
                             onClick   = onEditProfile,
                         )

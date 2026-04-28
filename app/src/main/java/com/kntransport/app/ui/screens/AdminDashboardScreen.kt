@@ -131,7 +131,7 @@ fun AdminDashboardScreen(
                 // Avatar — centred bottom overlap
                 UserAvatar(
                     name      = displayName,
-                    avatarUri = null,
+                    avatarUrl = (profileState as? ApiResult.Success)?.data?.avatarUrl,
                     size      = adminAvatarSize,
                     onClick   = onProfile,
                     modifier  = Modifier

@@ -167,7 +167,7 @@ fun DriverDashboardScreen(
                     // Avatar — centred bottom overlap
                     UserAvatar(
                         name      = displayName,
-                        avatarUri = null,
+                        avatarUrl = (profileState as? ApiResult.Success)?.data?.avatarUrl,
                         size      = avatarSize,
                         onClick   = onProfile,
                         modifier  = Modifier

@@ -48,6 +48,30 @@ class UserViewModel : ViewModel() {
         }
     }
 
+    fun uploadAvatarWithProfile(context: Context, uri: Uri, name: String, email: String, phone: String) {
+        viewModelScope.launch {
+            _updateState.value = ApiResult.Loading
+            val file = uriToFile(context, uri) ?: run {
+                _updateState.value = ApiResult.Error("Could not read image file")
+                return@launch
+            }
+            // Upload avatar first, then apply any text field changes.
+            val avatarResult = repo.uploadAvatar(file)
+            if (avatarResult is ApiResult.Error) {
+                _updateState.value = avatarResult
+                return@launch
+            }
+            val savedUser = (avatarResult as? ApiResult.Success)?.data
+            val textDirty = savedUser != null &&
+                (savedUser.name != name || savedUser.email != email || savedUser.phone != phone)
+            _updateState.value = if (textDirty) {
+                repo.updateProfile(name, email, phone)
+            } else {
+                avatarResult
+            }
+        }
+    }
+
     fun resetUpdateState() { _updateState.value = null }
 
     private fun uriToFile(context: Context, uri: Uri): File? = try {
