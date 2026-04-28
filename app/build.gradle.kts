@@ -1,8 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     // id("com.google.gms.google-services")  -- enable after adding google-services.json
 }
+
+// Load Maps API key from local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY", "")
 
 android {
     namespace = "com.kntransport.app"
@@ -16,13 +26,7 @@ android {
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Load Maps API key from local.properties (add MAPS_API_KEY=<your_key> there)
-        val localProperties = java.util.Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localProperties.load(localPropertiesFile.inputStream())
-        }
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
 
         // API base URL — override in local.properties or CI env var
         buildConfigField("String", "API_BASE_URL", "\"https://api.ktransport.co.za/\"")
@@ -113,9 +117,9 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.4")
 
     // Google Maps Compose + Location
-    implementation("com.google.maps.android:maps-compose:6.4.1")
-    implementation("com.google.android.gms:play-services-maps:19.2.0")
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
