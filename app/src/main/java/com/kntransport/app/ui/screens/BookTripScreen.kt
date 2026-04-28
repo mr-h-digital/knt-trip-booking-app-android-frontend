@@ -137,21 +137,32 @@ fun BookTripScreen(
             Column(Modifier.padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(20.dp))
 
-            // Info banner
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = c.blue.copy(alpha = 0.10f),
-                border = BorderStroke(1.dp, c.blue.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Info, null, tint = c.blue, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "Submit your trip request. K&T will send you a quote — accept it to confirm your booking.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.textMuted,
-                    )
+            // How it works
+            SectionHeader(title = "How It Works")
+            KntCard {
+                listOf(
+                    Triple(Icons.Rounded.EditNote,       "1. Fill in your trip details",          "Enter your pickup, drop-off, date, time and passenger count below."),
+                    Triple(Icons.Rounded.Send,           "2. Submit your request",                "Tap \"Submit Trip Request\" — K&T receives your booking instantly."),
+                    Triple(Icons.Rounded.RequestQuote,   "3. Receive a quote",                    "K&T will review your request and send you a price quote."),
+                    Triple(Icons.Rounded.CheckCircle,    "4. Accept & confirm",                   "Accept the quote to lock in your booking. You're all set!"),
+                ).forEachIndexed { i, (icon, title, body) ->
+                    if (i > 0) KntDivider()
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Box(
+                            Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(c.blue.copy(0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(icon, null, tint = c.blue, modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(title, style = MaterialTheme.typography.labelMedium, color = c.textBright)
+                            Text(body,  style = MaterialTheme.typography.bodySmall,   color = c.textMuted)
+                        }
+                    }
                 }
             }
 
@@ -173,22 +184,28 @@ fun BookTripScreen(
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                KntTextField(
-                    value         = dateDisplay,
-                    onValueChange = {},
-                    label         = "Date",
-                    leadingIcon   = Icons.Rounded.CalendarMonth,
-                    readOnly      = true,
-                    modifier      = Modifier.weight(1f).clickable { showDatePicker = true },
-                )
-                KntTextField(
-                    value         = timeDisplay,
-                    onValueChange = {},
-                    label         = "Time",
-                    leadingIcon   = Icons.Rounded.Schedule,
-                    readOnly      = true,
-                    modifier      = Modifier.weight(1f).clickable { showTimePicker = true },
-                )
+                // Date — transparent overlay captures taps since readOnly blocks clickable
+                Box(Modifier.weight(1f)) {
+                    KntTextField(
+                        value         = dateDisplay,
+                        onValueChange = {},
+                        label         = "Date",
+                        leadingIcon   = Icons.Rounded.CalendarMonth,
+                        readOnly      = true,
+                    )
+                    Box(Modifier.matchParentSize().clickable { showDatePicker = true })
+                }
+                // Time — same pattern
+                Box(Modifier.weight(1f)) {
+                    KntTextField(
+                        value         = timeDisplay,
+                        onValueChange = {},
+                        label         = "Time",
+                        leadingIcon   = Icons.Rounded.Schedule,
+                        readOnly      = true,
+                    )
+                    Box(Modifier.matchParentSize().clickable { showTimePicker = true })
+                }
             }
 
             Spacer(Modifier.height(16.dp))

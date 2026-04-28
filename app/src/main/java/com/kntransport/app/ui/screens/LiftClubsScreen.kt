@@ -107,7 +107,30 @@ fun LiftClubsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    LiftClubEmptyState(onBrowse = onCreateClub)
+                    when (selectedTab) {
+                        1 -> LiftClubEmptyState(
+                            onBrowse     = { selectedTab = 0 },
+                            onCreateClub = onCreateClub,
+                            title        = "No subscriptions yet",
+                            subtitle     = "You haven't joined any lift clubs. Browse available clubs and subscribe to one that suits your route.",
+                            browseLabel  = "Browse Lift Clubs",
+                            createLabel  = "Create a Lift Club",
+                        )
+                        2 -> LiftClubEmptyState(
+                            onBrowse     = onCreateClub,
+                            title        = "No lift club requests yet",
+                            subtitle     = "Create your first lift club request and K&T will match passengers on your route.",
+                            browseLabel  = "Create a Lift Club",
+                        )
+                        else -> LiftClubEmptyState(
+                            onBrowse     = { selectedTab = 0 },
+                            onCreateClub = onCreateClub,
+                            title        = "No lift clubs available",
+                            subtitle     = "There are no active lift clubs yet. Be the first to create one for your route!",
+                            browseLabel  = "Refresh",
+                            createLabel  = "Create a Lift Club",
+                        )
+                    }
                 }
             } else {
                 Column(

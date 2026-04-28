@@ -30,6 +30,7 @@ fun HomeScreen(
     onBookTrip      : () -> Unit,
     onMyTrips       : () -> Unit,
     onLiftClubs     : () -> Unit,
+    onCreateLiftClub: () -> Unit = {},
     onLiftClubDetail: (String) -> Unit,
     onNotifications : () -> Unit,
     onProfile       : () -> Unit,
@@ -378,7 +379,13 @@ fun HomeScreen(
                 if (clubsLoading) {
                     repeat(2) { TripCardShimmer() }
                 } else if (recentClubs.isEmpty()) {
-                    LiftClubEmptyState(onLiftClubs)
+                    LiftClubEmptyState(
+                        onBrowse     = onLiftClubs,
+                        onCreateClub = onCreateLiftClub,
+                        subtitle     = "Join a shared lift club or start your own — split costs and travel smarter.",
+                        browseLabel  = "View Lift Clubs",
+                        createLabel  = "Create a Lift Club",
+                    )
                 } else {
                     recentClubs.forEachIndexed { idx, club ->
                         StaggeredItem(index = idx + 2) {
@@ -457,7 +464,14 @@ fun TripEmptyState(onBook: () -> Unit) {
 }
 
 @Composable
-fun LiftClubEmptyState(onBrowse: () -> Unit) {
+fun LiftClubEmptyState(
+    onBrowse     : () -> Unit,
+    onCreateClub : (() -> Unit)? = null,
+    title        : String = "No lift clubs yet",
+    subtitle     : String = "Be the first to create a shared lift club in your area.",
+    browseLabel  : String = "Browse Lift Clubs",
+    createLabel  : String = "Create a Lift Club",
+) {
     val c = LocalAppColors.current
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -467,7 +481,6 @@ fun LiftClubEmptyState(onBrowse: () -> Unit) {
         Canvas(modifier = Modifier.size(80.dp)) {
             val cx = size.width / 2f
             val cy = size.height / 2f
-            // Three person silhouettes
             listOf(-0.28f, 0f, 0.28f).forEachIndexed { i, dx ->
                 val alpha = if (i == 1) 0.9f else 0.55f
                 val tint  = if (i == 1) KntYellow else KntBlue
@@ -480,7 +493,6 @@ fun LiftClubEmptyState(onBrowse: () -> Unit) {
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f),
                 )
             }
-            // Connecting arc
             drawArc(
                 color      = KntYellow.copy(alpha = 0.3f),
                 startAngle = 200f,
@@ -491,14 +503,24 @@ fun LiftClubEmptyState(onBrowse: () -> Unit) {
                 style      = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f),
             )
         }
-        Text("No lift clubs", style = MaterialTheme.typography.titleSmall, color = c.textBright)
-        Text("Browse or create a lift club today", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+        Text(title,    style = MaterialTheme.typography.titleSmall, color = c.textBright)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall,  color = c.textMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier  = Modifier.fillMaxWidth(0.8f))
         Spacer(Modifier.height(4.dp))
+        if (onCreateClub != null) {
+            KntPrimaryButton(
+                text     = createLabel,
+                onClick  = onCreateClub,
+                icon     = Icons.Rounded.Add,
+                modifier = Modifier.fillMaxWidth(0.75f),
+            )
+        }
         KntSecondaryButton(
-            text     = "Browse Lift Clubs",
+            text     = browseLabel,
             onClick  = onBrowse,
             icon     = Icons.Rounded.Groups,
-            modifier = Modifier.fillMaxWidth(0.7f),
+            modifier = Modifier.fillMaxWidth(0.75f),
         )
     }
 }
