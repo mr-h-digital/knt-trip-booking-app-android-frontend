@@ -51,6 +51,18 @@ class TripRepository {
     suspend fun getDriverEarnings() =
         safeApiCall { api.getDriverEarnings() }
 
+    suspend fun getAvailableTrips(page: Int = 0) =
+        safeApiCall { api.getAvailableTrips(page) }
+
+    suspend fun createDriverQuote(tripId: String, amount: Double, note: String) =
+        safeApiCall { api.createDriverQuote(tripId, DriverQuoteRequest(amount, note)) }
+
+    suspend fun editDriverQuote(quoteId: String, amount: Double, note: String) =
+        safeApiCall { api.editDriverQuote(quoteId, DriverQuoteRequest(amount, note)) }
+
+    suspend fun cancelDriverQuote(quoteId: String) =
+        safeApiCall { api.cancelDriverQuote(quoteId) }
+
     // ── Live tracking ─────────────────────────────────────────────────────────
 
     suspend fun getTripLocation(tripId: String) =

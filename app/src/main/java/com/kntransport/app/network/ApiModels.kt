@@ -120,11 +120,18 @@ data class QuoteDto(
     @SerializedName("amount")        val amount        : Double,
     @SerializedName("paymentCycle")  val paymentCycle  : String? = null,
     @SerializedName("driverNote")    val driverNote    : String = "",
+    @SerializedName("driverName")    val driverName    : String? = null,
+    @SerializedName("cancelled")     val cancelled     : Boolean = false,
 )
 
 data class QuoteAcceptRequest(
     @SerializedName("accepted")      val accepted      : Boolean,
     @SerializedName("paymentCycle")  val paymentCycle  : String? = null,
+)
+
+data class DriverQuoteRequest(
+    @SerializedName("amount")      val amount      : Double,
+    @SerializedName("driverNote")  val driverNote  : String = "",
 )
 
 // ── Notification ──────────────────────────────────────────────────────────────

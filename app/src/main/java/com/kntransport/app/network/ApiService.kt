@@ -180,6 +180,27 @@ interface ApiService {
     @GET("api/driver/earnings")
     suspend fun getDriverEarnings(): Response<DriverEarningsDto>
 
+    @GET("api/driver/available-trips")
+    suspend fun getAvailableTrips(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+    ): Response<PagedResponse<TripBookingDto>>
+
+    @POST("api/driver/trips/{id}/quote")
+    suspend fun createDriverQuote(
+        @Path("id") id: String,
+        @Body request: DriverQuoteRequest,
+    ): Response<QuoteDto>
+
+    @PUT("api/driver/quotes/{quoteId}")
+    suspend fun editDriverQuote(
+        @Path("quoteId") quoteId: String,
+        @Body request: DriverQuoteRequest,
+    ): Response<QuoteDto>
+
+    @DELETE("api/driver/quotes/{quoteId}")
+    suspend fun cancelDriverQuote(@Path("quoteId") quoteId: String): Response<Unit>
+
     // ── Notifications ─────────────────────────────────────────────────────────
     @GET("api/notifications")
     suspend fun getNotifications(

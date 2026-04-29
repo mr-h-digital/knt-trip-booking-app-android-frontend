@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.network.DriverEarningsDto
+import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.repository.TripRepository
 import kotlinx.coroutines.Job
@@ -61,6 +62,55 @@ class DriverViewModel : ViewModel() {
     }
 
     fun resetTripActionState() { _tripActionState.value = null }
+
+    // ── Available trips (Option C) ────────────────────────────────────────────
+
+    private val _availableTrips = MutableStateFlow<ApiResult<List<TripBookingDto>>>(ApiResult.Loading)
+    val availableTrips: StateFlow<ApiResult<List<TripBookingDto>>> = _availableTrips
+
+    fun loadAvailableTrips() {
+        viewModelScope.launch {
+            _availableTrips.value = ApiResult.Loading
+            val result = repo.getAvailableTrips()
+            _availableTrips.value = when (result) {
+                is ApiResult.Success -> ApiResult.Success(result.data.content)
+                is ApiResult.Error   -> result
+                ApiResult.Loading    -> ApiResult.Loading
+            }
+        }
+    }
+
+    // ── Quote actions ─────────────────────────────────────────────────────────
+
+    private val _quoteState = MutableStateFlow<ApiResult<QuoteDto>?>(null)
+    val quoteState: StateFlow<ApiResult<QuoteDto>?> = _quoteState
+
+    private val _cancelQuoteState = MutableStateFlow<ApiResult<Unit>?>(null)
+    val cancelQuoteState: StateFlow<ApiResult<Unit>?> = _cancelQuoteState
+
+    fun createQuote(tripId: String, amount: Double, note: String) {
+        viewModelScope.launch {
+            _quoteState.value = ApiResult.Loading
+            _quoteState.value = repo.createDriverQuote(tripId, amount, note)
+        }
+    }
+
+    fun editQuote(quoteId: String, amount: Double, note: String) {
+        viewModelScope.launch {
+            _quoteState.value = ApiResult.Loading
+            _quoteState.value = repo.editDriverQuote(quoteId, amount, note)
+        }
+    }
+
+    fun cancelQuote(quoteId: String) {
+        viewModelScope.launch {
+            _cancelQuoteState.value = ApiResult.Loading
+            _cancelQuoteState.value = repo.cancelDriverQuote(quoteId)
+        }
+    }
+
+    fun resetQuoteState() { _quoteState.value = null }
+    fun resetCancelQuoteState() { _cancelQuoteState.value = null }
 
     // ── Live location sharing ─────────────────────────────────────────────────
 

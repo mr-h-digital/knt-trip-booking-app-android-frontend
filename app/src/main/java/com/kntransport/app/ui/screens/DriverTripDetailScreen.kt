@@ -31,6 +31,7 @@ import com.google.android.gms.location.Priority
 import com.kntransport.app.R
 import com.kntransport.app.data.*
 import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -71,6 +72,39 @@ fun DriverTripDetailScreen(
     var showCancelSheet    by remember { mutableStateOf(false) }
     var pendingStatus      by remember { mutableStateOf<String?>(null) }
     var errorMessage       by remember { mutableStateOf<String?>(null) }
+
+    // Quote flow state
+    val quoteState       by viewModel.quoteState.collectAsState()
+    val cancelQuoteState by viewModel.cancelQuoteState.collectAsState()
+    var showQuoteSheet   by remember { mutableStateOf(false) }
+    var editingQuote     by remember { mutableStateOf<QuoteDto?>(null) }
+    var activeQuoteId    by remember(dto.id) { mutableStateOf<String?>(null) }
+
+    // Track the quote this driver sent (stored locally after creation)
+    LaunchedEffect(quoteState) {
+        when (val s = quoteState) {
+            is ApiResult.Success -> {
+                activeQuoteId  = s.data.id
+                currentStatus  = "QUOTE_SENT"
+                showQuoteSheet = false
+                editingQuote   = null
+                viewModel.resetQuoteState()
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetQuoteState() }
+            else -> {}
+        }
+    }
+    LaunchedEffect(cancelQuoteState) {
+        when (val s = cancelQuoteState) {
+            is ApiResult.Success -> {
+                activeQuoteId = null
+                currentStatus = "PENDING_QUOTE"
+                viewModel.resetCancelQuoteState()
+            }
+            is ApiResult.Error -> { errorMessage = s.message; viewModel.resetCancelQuoteState() }
+            else -> {}
+        }
+    }
 
     val isSharingLocation by viewModel.isSharingLocation.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -129,6 +163,19 @@ fun DriverTripDetailScreen(
                 viewModel.cancelTrip(tripId, reason, note)
                 showCancelSheet = false
             },
+        )
+    }
+
+    if (showQuoteSheet) {
+        DriverQuoteSheet(
+            existingQuote = editingQuote,
+            onDismiss     = { showQuoteSheet = false; editingQuote = null },
+            onSubmit      = { amount, note ->
+                val qId = editingQuote?.id
+                if (qId != null) viewModel.editQuote(qId, amount, note)
+                else             viewModel.createQuote(tripId, amount, note)
+            },
+            isLoading = quoteState is ApiResult.Loading,
         )
     }
 
@@ -364,6 +411,53 @@ fun DriverTripDetailScreen(
             Spacer(Modifier.height(28.dp))
 
             when (currentStatus) {
+                "PENDING_QUOTE" -> {
+                    KntPrimaryButton(
+                        text    = "Quote This Trip",
+                        onClick = { editingQuote = null; showQuoteSheet = true },
+                        icon    = Icons.Rounded.RequestQuote,
+                    )
+                }
+                "QUOTE_SENT" -> {
+                    if (activeQuoteId != null) {
+                        // This driver sent the quote
+                        KntPrimaryButton(
+                            text    = "Edit Quote",
+                            onClick = {
+                                editingQuote = QuoteDto(
+                                    id            = activeQuoteId!!,
+                                    referenceId   = dto.id,
+                                    referenceType = "TRIP",
+                                    amount        = dto.quotedAmount ?: 0.0,
+                                    driverNote    = "",
+                                )
+                                showQuoteSheet = true
+                            },
+                            icon = Icons.Rounded.Edit,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        KntSecondaryButton(
+                            text    = "Cancel Quote",
+                            onClick = { viewModel.cancelQuote(activeQuoteId!!) },
+                            icon    = Icons.Rounded.Cancel,
+                        )
+                    } else {
+                        // Another driver's quote is active — just show info
+                        Surface(
+                            shape  = RoundedCornerShape(14.dp),
+                            color  = c.yellow.copy(0.10f),
+                            border = BorderStroke(1.dp, c.yellow.copy(0.3f)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.HourglassTop, null, tint = c.yellow, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text("Quote sent — awaiting commuter response",
+                                    style = MaterialTheme.typography.bodySmall, color = c.yellow)
+                            }
+                        }
+                    }
+                }
                 "CONFIRMED", "QUOTE_ACCEPTED" -> {
                     KntPrimaryButton(
                         text    = "Start Trip",
@@ -417,6 +511,103 @@ fun DriverTripDetailScreen(
 
             Spacer(Modifier.height(32.dp))
             } // close inner padding Column
+        }
+    }
+}
+
+// ── Quote bottom sheet ────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DriverQuoteSheet(
+    existingQuote : com.kntransport.app.network.QuoteDto?,
+    onDismiss     : () -> Unit,
+    onSubmit      : (amount: Double, note: String) -> Unit,
+    isLoading     : Boolean,
+) {
+    val c       = LocalAppColors.current
+    val isEdit  = existingQuote != null
+    var amount  by remember(existingQuote) { mutableStateOf(existingQuote?.amount?.let { "%.2f".format(it) } ?: "") }
+    var note    by remember(existingQuote) { mutableStateOf(existingQuote?.driverNote ?: "") }
+    val isValid = amount.toDoubleOrNull()?.let { it > 0 } == true
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = c.surface1,
+        dragHandle = {
+            Box(Modifier.padding(vertical = 10.dp).width(36.dp).height(4.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(c.borderColor))
+        },
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(38.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                        .background(c.yellow.copy(0.14f)),
+                    Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.RequestQuote, null, tint = c.yellow, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    if (isEdit) "Edit Quote" else "Submit a Quote",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = c.textBright,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Enter the price you want to charge for this trip.",
+                style = MaterialTheme.typography.bodySmall,
+                color = c.textMuted,
+            )
+            Spacer(Modifier.height(20.dp))
+
+            KntTextField(
+                value         = amount,
+                onValueChange = { amount = it },
+                label         = "Quote Amount (R)",
+                leadingIcon   = Icons.Rounded.Payments,
+                keyboardType  = androidx.compose.ui.text.input.KeyboardType.Decimal,
+            )
+            Spacer(Modifier.height(12.dp))
+            KntTextField(
+                value         = note,
+                onValueChange = { note = it },
+                label         = "Note to commuter (optional)",
+                leadingIcon   = Icons.Rounded.Notes,
+                singleLine    = false,
+                maxLines      = 3,
+            )
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick  = { amount.toDoubleOrNull()?.let { onSubmit(it, note.trim()) } },
+                enabled  = isValid && !isLoading,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = c.yellow, contentColor = Color.Black),
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.Black)
+                } else {
+                    Icon(Icons.Rounded.Send, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (isEdit) "Update Quote" else "Send Quote",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
+            }
         }
     }
 }

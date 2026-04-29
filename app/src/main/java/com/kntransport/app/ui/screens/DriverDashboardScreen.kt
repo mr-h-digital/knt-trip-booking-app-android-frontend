@@ -31,12 +31,13 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriverDashboardScreen(
-    onBack         : () -> Unit,
-    onMyTrips      : () -> Unit,
-    onEarnings     : () -> Unit,
-    onProfile      : () -> Unit,
-    onNotifications: () -> Unit,
-    onTripDetail   : (String) -> Unit,
+    onBack           : () -> Unit,
+    onMyTrips        : () -> Unit,
+    onAvailableTrips : () -> Unit = {},
+    onEarnings       : () -> Unit,
+    onProfile        : () -> Unit,
+    onNotifications  : () -> Unit,
+    onTripDetail     : (String) -> Unit,
     viewModel      : DriverViewModel = viewModel(),
     userViewModel  : UserViewModel = viewModel(),
     notifViewModel : com.kntransport.app.viewmodel.NotificationViewModel = viewModel(),
@@ -262,13 +263,27 @@ fun DriverDashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     DriverActionCard(
+                        icon     = Icons.Rounded.EventAvailable,
+                        label    = "Available Trips",
+                        sublabel = "Browse & quote requests",
+                        tint     = c.yellow,
+                        onClick  = onAvailableTrips,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DriverActionCard(
                         icon     = Icons.Rounded.DirectionsBus,
                         label    = "My Trips",
-                        sublabel = "View all assigned trips",
+                        sublabel = "View assigned trips",
                         tint     = c.blue,
                         onClick  = onMyTrips,
                         modifier = Modifier.weight(1f),
                     )
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     DriverActionCard(
                         icon     = Icons.Rounded.Payments,
                         label    = "Earnings",
@@ -277,6 +292,7 @@ fun DriverDashboardScreen(
                         onClick  = onEarnings,
                         modifier = Modifier.weight(1f),
                     )
+                    Spacer(Modifier.weight(1f))
                 }
 
                 // ── My Vehicle ───────────────────────────────────────────

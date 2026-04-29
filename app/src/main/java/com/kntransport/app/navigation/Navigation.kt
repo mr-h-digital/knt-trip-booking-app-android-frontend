@@ -37,10 +37,11 @@ object Routes {
     const val RATE_TRIP       = "rate_trip/{tripId}"
 
     // Driver
-    const val DRIVER_DASHBOARD    = "driver_dashboard"
-    const val DRIVER_TRIPS        = "driver_trips"
-    const val DRIVER_TRIP_DETAIL  = "driver_trip_detail/{tripId}"
-    const val DRIVER_EARNINGS     = "driver_earnings"
+    const val DRIVER_DASHBOARD        = "driver_dashboard"
+    const val DRIVER_TRIPS            = "driver_trips"
+    const val DRIVER_TRIP_DETAIL      = "driver_trip_detail/{tripId}"
+    const val DRIVER_EARNINGS         = "driver_earnings"
+    const val DRIVER_AVAILABLE_TRIPS  = "driver_available_trips"
 
     fun driverTripDetail(id: String) = "driver_trip_detail/$id"
 
@@ -295,14 +296,22 @@ fun KntNavHost(
 
         composable(Routes.DRIVER_DASHBOARD) {
             DriverDashboardScreen(
-                onBack         = {
+                onBack             = {
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
-                onMyTrips      = { navController.navigate(Routes.DRIVER_TRIPS) },
-                onEarnings     = { navController.navigate(Routes.DRIVER_EARNINGS) },
-                onProfile      = { navController.navigate(Routes.PROFILE) },
-                onNotifications= { navController.navigate(Routes.NOTIFICATIONS) },
-                onTripDetail   = { id -> navController.navigate(Routes.driverTripDetail(id)) },
+                onMyTrips          = { navController.navigate(Routes.DRIVER_TRIPS) },
+                onAvailableTrips   = { navController.navigate(Routes.DRIVER_AVAILABLE_TRIPS) },
+                onEarnings         = { navController.navigate(Routes.DRIVER_EARNINGS) },
+                onProfile          = { navController.navigate(Routes.PROFILE) },
+                onNotifications    = { navController.navigate(Routes.NOTIFICATIONS) },
+                onTripDetail       = { id -> navController.navigate(Routes.driverTripDetail(id)) },
+            )
+        }
+
+        composable(Routes.DRIVER_AVAILABLE_TRIPS) {
+            DriverAvailableTripsScreen(
+                onBack       = { navController.popBackStack() },
+                onTripDetail = { id -> navController.navigate(Routes.driverTripDetail(id)) },
             )
         }
 
