@@ -56,6 +56,12 @@ interface ApiService {
     @POST("api/lift-clubs")
     suspend fun createLiftClub(@Body request: CreateLiftClubRequest): Response<LiftClubDto>
 
+    @GET("api/lift-clubs/my-subscriptions")
+    suspend fun getMyLiftClubSubscriptions(): Response<List<LiftClubDto>>
+
+    @GET("api/lift-clubs/my-clubs")
+    suspend fun getMyLiftClubs(): Response<List<LiftClubDto>>
+
     @POST("api/lift-clubs/{id}/subscribe")
     suspend fun subscribeToLiftClub(@Path("id") id: String): Response<Unit>
 

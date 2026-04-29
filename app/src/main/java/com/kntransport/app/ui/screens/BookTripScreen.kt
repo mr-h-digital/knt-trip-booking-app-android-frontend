@@ -10,8 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.libraries.places.api.Places
 import com.kntransport.app.R
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
@@ -28,7 +30,9 @@ fun BookTripScreen(
     onSubmitted: () -> Unit,
     viewModel  : TripViewModel = viewModel(),
 ) {
-    val c           = LocalAppColors.current
+    val c            = LocalAppColors.current
+    val context      = LocalContext.current
+    val placesClient = remember { Places.createClient(context) }
     val createState by viewModel.createState.collectAsState()
 
     var pickup     by remember { mutableStateOf("") }
@@ -169,17 +173,23 @@ fun BookTripScreen(
             Spacer(Modifier.height(20.dp))
             SectionHeader(title = "Trip Details")
 
-            KntTextField(
-                value = pickup, onValueChange = { pickup = it },
-                label = "Pickup Address",
-                leadingIcon = Icons.Rounded.LocationOn,
+            AddressSearchField(
+                value            = pickup,
+                onValueChange    = { pickup = it },
+                onAddressSelected = { pickup = it },
+                label            = "Pickup Address",
+                placesClient     = placesClient,
+                leadingIcon      = Icons.Rounded.LocationOn,
             )
             Spacer(Modifier.height(12.dp))
 
-            KntTextField(
-                value = dropoff, onValueChange = { dropoff = it },
-                label = "Drop-off Address",
-                leadingIcon = Icons.Rounded.LocationOn,
+            AddressSearchField(
+                value            = dropoff,
+                onValueChange    = { dropoff = it },
+                onAddressSelected = { dropoff = it },
+                label            = "Drop-off Address",
+                placesClient     = placesClient,
+                leadingIcon      = Icons.Rounded.Flag,
             )
             Spacer(Modifier.height(12.dp))
 

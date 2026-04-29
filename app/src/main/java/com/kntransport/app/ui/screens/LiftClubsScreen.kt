@@ -29,17 +29,24 @@ fun LiftClubsScreen(
     onCreateClub: () -> Unit,
     viewModel   : LiftClubViewModel = viewModel(),
 ) {
-    val c          = LocalAppColors.current
-    val clubsState by viewModel.clubs.collectAsState()
-    val tabs       = listOf("Browse", "My Subscriptions", "My Requests")
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val c                 = LocalAppColors.current
+    val clubsState        by viewModel.clubs.collectAsState()
+    val subscriptionsState by viewModel.mySubscriptions.collectAsState()
+    val myClubsState      by viewModel.myClubs.collectAsState()
+    val tabs              = listOf("Browse", "My Subscriptions", "My Requests")
+    var selectedTab       by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { viewModel.loadLiftClubs() }
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            1 -> viewModel.loadMySubscriptions()
+            2 -> viewModel.loadMyClubs()
+        }
+    }
 
-    val allClubs   = (clubsState as? ApiResult.Success)?.data ?: emptyList()
-    // "My subscriptions" and "My requests" still use SampleData until a user-liftclub API exists
-    val subscribed = emptyList<LiftClubDto>() // subscription state requires a dedicated API endpoint
-    val myRequests = emptyList<LiftClubDto>() // creatorId not in LiftClubDto; requires dedicated API endpoint
+    val allClubs   = (clubsState        as? ApiResult.Success)?.data ?: emptyList()
+    val subscribed = (subscriptionsState as? ApiResult.Success)?.data ?: emptyList()
+    val myRequests = (myClubsState      as? ApiResult.Success)?.data ?: emptyList()
 
     KntScaffold(
         title  = "Lift Clubs",
@@ -87,19 +94,29 @@ fun LiftClubsScreen(
                 }
             }
 
+            val activeState = when (selectedTab) {
+                1    -> subscriptionsState
+                2    -> myClubsState
+                else -> clubsState
+            }
             val list = when (selectedTab) {
                 1    -> subscribed
                 2    -> myRequests
                 else -> allClubs
             }
+            val onRetry: () -> Unit = when (selectedTab) {
+                1    -> {{ viewModel.loadMySubscriptions() }}
+                2    -> {{ viewModel.loadMyClubs() }}
+                else -> {{ viewModel.loadLiftClubs() }}
+            }
 
-            if (clubsState is ApiResult.Loading) {
+            if (activeState is ApiResult.Loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (clubsState is ApiResult.Error) {
+            } else if (activeState is ApiResult.Error) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    ErrorState(message = (clubsState as ApiResult.Error).message, onRetry = { viewModel.loadLiftClubs() })
+                    ErrorState(message = (activeState as ApiResult.Error).message, onRetry = onRetry)
                 }
             } else if (list.isEmpty()) {
                 Column(

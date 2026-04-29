@@ -31,6 +31,12 @@ class LiftClubRepository {
         )
     }
 
+    suspend fun getMySubscriptions() =
+        safeApiCall { api.getMyLiftClubSubscriptions() }
+
+    suspend fun getMyClubs() =
+        safeApiCall { api.getMyLiftClubs() }
+
     suspend fun subscribe(id: String) =
         safeApiCall { api.subscribeToLiftClub(id) }
 }

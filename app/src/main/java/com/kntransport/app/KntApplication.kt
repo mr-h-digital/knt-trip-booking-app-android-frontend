@@ -3,6 +3,9 @@ package com.kntransport.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import com.google.android.libraries.places.api.Places
 import com.kntransport.app.network.ApiClient
 
 class KntApplication : Application() {
@@ -10,6 +13,13 @@ class KntApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ApiClient.init(this)
+        if (!Places.isInitialized()) {
+            val appInfo: ApplicationInfo = packageManager.getApplicationInfo(
+                packageName, PackageManager.GET_META_DATA
+            )
+            val mapsKey = appInfo.metaData?.getString("com.google.android.geo.API_KEY") ?: ""
+            Places.initializeWithNewPlacesApiEnabled(this, mapsKey)
+        }
         createNotificationChannels()
     }
 

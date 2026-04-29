@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.libraries.places.api.Places
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -24,7 +26,9 @@ fun CreateLiftClubScreen(
     onSubmitted: () -> Unit,
     viewModel  : LiftClubViewModel = viewModel(),
 ) {
-    val c           = LocalAppColors.current
+    val c            = LocalAppColors.current
+    val context      = LocalContext.current
+    val placesClient = remember { Places.createClient(context) }
     val createState by viewModel.createState.collectAsState()
 
     var title         by remember { mutableStateOf("") }
@@ -96,14 +100,24 @@ fun CreateLiftClubScreen(
                 leadingIcon = Icons.Rounded.Groups)
             Spacer(Modifier.height(12.dp))
 
-            KntTextField(value = pickupArea, onValueChange = { pickupArea = it },
-                label = "Pickup Area",
-                leadingIcon = Icons.Rounded.LocationOn)
+            AddressSearchField(
+                value            = pickupArea,
+                onValueChange    = { pickupArea = it },
+                onAddressSelected = { pickupArea = it },
+                label            = "Pickup Area",
+                placesClient     = placesClient,
+                leadingIcon      = Icons.Rounded.LocationOn,
+            )
             Spacer(Modifier.height(12.dp))
 
-            KntTextField(value = dropArea, onValueChange = { dropArea = it },
-                label = "Drop-off Area",
-                leadingIcon = Icons.Rounded.Flag)
+            AddressSearchField(
+                value            = dropArea,
+                onValueChange    = { dropArea = it },
+                onAddressSelected = { dropArea = it },
+                label            = "Drop-off Area",
+                placesClient     = placesClient,
+                leadingIcon      = Icons.Rounded.Flag,
+            )
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

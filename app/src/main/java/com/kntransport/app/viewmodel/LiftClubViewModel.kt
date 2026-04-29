@@ -42,6 +42,30 @@ class LiftClubViewModel : ViewModel() {
         }
     }
 
+    // ── My Subscriptions ─────────────────────────────────────────────────────
+
+    private val _mySubscriptions = MutableStateFlow<ApiResult<List<LiftClubDto>>>(ApiResult.Loading)
+    val mySubscriptions: StateFlow<ApiResult<List<LiftClubDto>>> = _mySubscriptions
+
+    fun loadMySubscriptions() {
+        viewModelScope.launch {
+            _mySubscriptions.value = ApiResult.Loading
+            _mySubscriptions.value = repo.getMySubscriptions()
+        }
+    }
+
+    // ── My Clubs (created by me) ──────────────────────────────────────────────
+
+    private val _myClubs = MutableStateFlow<ApiResult<List<LiftClubDto>>>(ApiResult.Loading)
+    val myClubs: StateFlow<ApiResult<List<LiftClubDto>>> = _myClubs
+
+    fun loadMyClubs() {
+        viewModelScope.launch {
+            _myClubs.value = ApiResult.Loading
+            _myClubs.value = repo.getMyClubs()
+        }
+    }
+
     // ── Subscribe ─────────────────────────────────────────────────────────────
 
     private val _subscribeState = MutableStateFlow<ApiResult<Unit>?>(null)

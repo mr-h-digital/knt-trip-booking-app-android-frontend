@@ -116,10 +116,11 @@ dependencies {
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.4")
 
-    // Google Maps Compose + Location
+    // Google Maps Compose + Location + Places Autocomplete
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation("com.google.android.libraries.places:places:4.1.0")
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
