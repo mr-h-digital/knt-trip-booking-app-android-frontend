@@ -1445,3 +1445,78 @@ fun formatRelativeTime(isoTimestamp: String): String {
         isoTimestamp
     }
 }
+
+// ── Legal document helpers ────────────────────────────────────────────────────
+
+@Composable
+fun LegalLastUpdated(date: String) {
+    val c = LocalAppColors.current
+    Text(
+        "Last updated: $date",
+        style = MaterialTheme.typography.labelSmall,
+        color = c.textDim,
+    )
+}
+
+@Composable
+fun LegalSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    val c = LocalAppColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color      = c.textBright,
+            ),
+        )
+        content()
+    }
+}
+
+@Composable
+fun LegalSubSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    val c = LocalAppColors.current
+    Column(
+        modifier = Modifier.padding(start = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                color      = c.textMuted,
+            ),
+        )
+        content()
+    }
+}
+
+@Composable
+fun LegalBody(text: String) {
+    val c = LocalAppColors.current
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall.copy(
+            color      = c.textMuted,
+            lineHeight = 20.sp,
+        ),
+    )
+}
+
+@Composable
+fun LegalBullet(text: String) {
+    val c = LocalAppColors.current
+    Row(
+        modifier = Modifier.padding(start = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("•", style = MaterialTheme.typography.bodySmall, color = c.yellow)
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall.copy(
+                color      = c.textMuted,
+                lineHeight = 20.sp,
+            ),
+        )
+    }
+}

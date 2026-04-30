@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,7 +21,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.R
@@ -32,9 +36,11 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SignUpScreen(
-    onSignedUp: () -> Unit,
-    onLogin   : () -> Unit,
-    viewModel : AuthViewModel = viewModel(),
+    onSignedUp  : () -> Unit,
+    onLogin     : () -> Unit,
+    onTerms     : () -> Unit = {},
+    onPrivacy   : () -> Unit = {},
+    viewModel   : AuthViewModel = viewModel(),
 ) {
     val c           = LocalAppColors.current
     val signUpState by viewModel.signUpState.collectAsState()
@@ -379,38 +385,61 @@ fun SignUpScreen(
                     Spacer(Modifier.height(16.dp))
 
                     // Terms & Conditions checkbox
+                    val termsAnnotated = buildAnnotatedString {
+                        withStyle(SpanStyle(color = if (termsAccepted) c.textBright else c.textMuted)) {
+                            append("I have read and agree to the ")
+                        }
+                        pushStringAnnotation("TERMS", "terms")
+                        withStyle(SpanStyle(color = c.blue, fontWeight = FontWeight.SemiBold)) {
+                            append("Terms of Service")
+                        }
+                        pop()
+                        withStyle(SpanStyle(color = if (termsAccepted) c.textBright else c.textMuted)) {
+                            append(" and ")
+                        }
+                        pushStringAnnotation("PRIVACY", "privacy")
+                        withStyle(SpanStyle(color = c.blue, fontWeight = FontWeight.SemiBold)) {
+                            append("Privacy Policy")
+                        }
+                        pop()
+                        withStyle(SpanStyle(color = if (termsAccepted) c.textBright else c.textMuted)) {
+                            append(".")
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (termsAccepted) c.blue.copy(0.08f) else c.surface2.copy(0.5f)
-                            )
-                            .border(
-                                1.dp,
-                                if (termsAccepted) c.blue.copy(0.4f) else c.borderColor,
-                                RoundedCornerShape(10.dp),
-                            )
+                            .background(if (termsAccepted) c.blue.copy(0.08f) else c.surface2.copy(0.5f))
+                            .border(1.dp, if (termsAccepted) c.blue.copy(0.4f) else c.borderColor, RoundedCornerShape(10.dp))
                             .clickable { termsAccepted = !termsAccepted }
                             .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
                         Checkbox(
                             checked         = termsAccepted,
                             onCheckedChange = { termsAccepted = it },
                             colors          = CheckboxDefaults.colors(
-                                checkedColor        = c.blue,
-                                uncheckedColor      = c.textDim,
-                                checkmarkColor      = Color.White,
+                                checkedColor   = c.blue,
+                                uncheckedColor = c.textDim,
+                                checkmarkColor = Color.White,
                             ),
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp).padding(top = 1.dp),
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text(
-                            text  = "I have read and agree to the Terms of Service and Privacy Policy.",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (termsAccepted) c.textBright else c.textMuted,
-                            ),
+                        ClickableText(
+                            text  = termsAnnotated,
+                            style = MaterialTheme.typography.bodySmall,
+                            onClick = { offset ->
+                                termsAnnotated.getStringAnnotations("TERMS", offset, offset)
+                                    .firstOrNull()?.let { onTerms() }
+                                termsAnnotated.getStringAnnotations("PRIVACY", offset, offset)
+                                    .firstOrNull()?.let { onPrivacy() }
+                                // Tapping anywhere else toggles the checkbox
+                                if (termsAnnotated.getStringAnnotations(offset, offset).isEmpty()) {
+                                    termsAccepted = !termsAccepted
+                                }
+                            },
                         )
                     }
 

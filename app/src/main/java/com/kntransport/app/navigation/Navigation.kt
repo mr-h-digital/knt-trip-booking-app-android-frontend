@@ -35,6 +35,8 @@ object Routes {
     const val APPEARANCE      = "appearance"
     const val EDIT_PROFILE    = "edit_profile"
     const val RATE_TRIP       = "rate_trip/{tripId}"
+    const val TERMS           = "terms"
+    const val PRIVACY         = "privacy"
 
     // Driver
     const val DRIVER_DASHBOARD        = "driver_dashboard"
@@ -131,7 +133,9 @@ fun KntNavHost(
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onLogin = { navController.popBackStack() },
+                onLogin   = { navController.popBackStack() },
+                onTerms   = { navController.navigate(Routes.TERMS) },
+                onPrivacy = { navController.navigate(Routes.PRIVACY) },
             )
         }
 
@@ -278,11 +282,21 @@ fun KntNavHost(
                 },
                 onAppearance  = { navController.navigate(Routes.APPEARANCE) },
                 onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
+                onTerms       = { navController.navigate(Routes.TERMS) },
+                onPrivacy     = { navController.navigate(Routes.PRIVACY) },
             )
         }
 
         composable(Routes.APPEARANCE) {
             AppearanceScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.TERMS) {
+            TermsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.PRIVACY) {
+            PrivacyScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.EDIT_PROFILE) {

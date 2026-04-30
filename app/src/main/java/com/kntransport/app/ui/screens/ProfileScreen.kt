@@ -25,6 +25,8 @@ fun ProfileScreen(
     onSignOut     : () -> Unit = {},
     onAppearance  : () -> Unit = {},
     onEditProfile : () -> Unit = {},
+    onTerms       : () -> Unit = {},
+    onPrivacy     : () -> Unit = {},
     viewModel     : UserViewModel = viewModel(),
 ) {
     val c            = LocalAppColors.current
@@ -202,6 +204,22 @@ fun ProfileScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
+                SectionHeader(title = "Legal")
+                LegalLinkCard(
+                    icon     = Icons.Rounded.Description,
+                    label    = "Terms of Service",
+                    subtitle = "View our terms",
+                    onClick  = onTerms,
+                )
+                Spacer(Modifier.height(8.dp))
+                LegalLinkCard(
+                    icon     = Icons.Rounded.Shield,
+                    label    = "Privacy Policy",
+                    subtitle = "How we handle your data",
+                    onClick  = onPrivacy,
+                )
+
+                Spacer(Modifier.height(16.dp))
 
                 // Sign out
                 Button(
@@ -278,6 +296,22 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(32.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun LegalLinkCard(icon: ImageVector, label: String, subtitle: String, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    KntCard(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = c.blue, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label,    style = MaterialTheme.typography.labelMedium, color = c.textMuted)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium,  color = c.textBright)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = c.textDim, modifier = Modifier.size(18.dp))
         }
     }
 }
