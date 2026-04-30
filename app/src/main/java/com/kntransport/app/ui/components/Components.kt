@@ -158,8 +158,10 @@ fun UserAvatar(
         else -> null
     }
 
+    var imageLoadFailed by remember(imageData) { mutableStateOf(false) }
+
     Box(baseMod, contentAlignment = Alignment.Center) {
-        if (imageData != null) {
+        if (imageData != null && !imageLoadFailed) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(imageData)
@@ -167,8 +169,11 @@ fun UserAvatar(
                 contentDescription = name,
                 contentScale       = ContentScale.Crop,
                 modifier           = Modifier.fillMaxSize(),
+                onError            = { imageLoadFailed = true },
             )
-        } else {
+        }
+        // Show initials when there is no URL, or when the image failed to load
+        if (imageData == null || imageLoadFailed) {
             Box(
                 Modifier.fillMaxSize()
                     .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
@@ -634,12 +639,14 @@ fun VehiclePhotoAvatar(
             .border(1.dp, Brush.linearGradient(listOf(KntYellow.copy(0.5f), KntBlueBright.copy(0.3f))), shape),
         contentAlignment = Alignment.Center,
     ) {
-        if (!photoUrl.isNullOrBlank()) {
+        var vehiclePhotoFailed by remember(photoUrl) { mutableStateOf(false) }
+        if (!photoUrl.isNullOrBlank() && !vehiclePhotoFailed) {
             AsyncImage(
                 model              = ImageRequest.Builder(LocalContext.current).data(photoUrl).build(),
                 contentDescription = "Vehicle photo",
                 contentScale       = ContentScale.Crop,
                 modifier           = Modifier.fillMaxSize(),
+                onError            = { vehiclePhotoFailed = true },
             )
         } else {
             Icon(Icons.Rounded.DirectionsBus, null, tint = c.yellow, modifier = Modifier.size(size * 0.48f))

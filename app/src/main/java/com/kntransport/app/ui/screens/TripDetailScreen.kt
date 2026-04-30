@@ -283,12 +283,14 @@ fun TripDetailScreen(
                             Modifier.size(48.dp).clip(CircleShape).background(c.blue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (!dto.driverAvatarUrl.isNullOrBlank()) {
+                            var driverAvatarFailed by remember(dto.driverAvatarUrl) { mutableStateOf(false) }
+                            if (!dto.driverAvatarUrl.isNullOrBlank() && !driverAvatarFailed) {
                                 AsyncImage(
                                     model              = ImageRequest.Builder(LocalContext.current).data(dto.driverAvatarUrl).build(),
                                     contentDescription = dto.driverName,
                                     contentScale       = ContentScale.Crop,
                                     modifier           = Modifier.fillMaxSize().clip(CircleShape),
+                                    onError            = { driverAvatarFailed = true },
                                 )
                             } else {
                                 val initials = dto.driverName.split(" ")
