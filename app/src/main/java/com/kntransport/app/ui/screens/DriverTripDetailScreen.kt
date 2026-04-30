@@ -78,20 +78,23 @@ fun DriverTripDetailScreen(
     val cancelQuoteState by viewModel.cancelQuoteState.collectAsState()
     var showQuoteSheet   by remember { mutableStateOf(false) }
     var editingQuote     by remember { mutableStateOf<QuoteDto?>(null) }
-    var activeQuoteId    by remember(dto.id) { mutableStateOf<String?>(dto.myQuote?.id) }
+    var activeQuoteId     by remember(dto.id) { mutableStateOf<String?>(dto.myQuote?.id) }
     var activeQuoteAmount by remember(dto.id) { mutableStateOf<Double?>(dto.myQuote?.amount ?: dto.quotedAmount) }
-    var activeQuoteNote  by remember(dto.id) { mutableStateOf(dto.myQuote?.driverNote ?: "") }
+    var activeQuoteNote   by remember(dto.id) { mutableStateOf(dto.myQuote?.driverNote ?: "") }
+    var quoteSuccessMsg   by remember { mutableStateOf<String?>(null) }
 
     // Track the quote this driver sent (stored locally after creation)
     LaunchedEffect(quoteState) {
         when (val s = quoteState) {
             is ApiResult.Success -> {
+                val wasEdit       = editingQuote != null
                 activeQuoteId     = s.data.id
                 activeQuoteAmount = s.data.amount
                 activeQuoteNote   = s.data.driverNote
                 currentStatus     = "QUOTE_SENT"
                 showQuoteSheet    = false
                 editingQuote      = null
+                quoteSuccessMsg   = if (wasEdit) "Quote updated successfully" else "Quote submitted successfully"
                 viewModel.resetQuoteState()
             }
             is ApiResult.Error -> { errorMessage = s.message; viewModel.resetQuoteState() }
@@ -101,8 +104,10 @@ fun DriverTripDetailScreen(
     LaunchedEffect(cancelQuoteState) {
         when (val s = cancelQuoteState) {
             is ApiResult.Success -> {
-                activeQuoteId = null
-                currentStatus = "PENDING_QUOTE"
+                activeQuoteId     = null
+                activeQuoteAmount = null
+                activeQuoteNote   = ""
+                currentStatus     = "PENDING_QUOTE"
                 viewModel.resetCancelQuoteState()
             }
             is ApiResult.Error -> { errorMessage = s.message; viewModel.resetCancelQuoteState() }
@@ -156,6 +161,9 @@ fun DriverTripDetailScreen(
     val snackbarState = remember { SnackbarHostState() }
     LaunchedEffect(errorMessage) {
         errorMessage?.let { snackbarState.showSnackbar(it); errorMessage = null }
+    }
+    LaunchedEffect(quoteSuccessMsg) {
+        quoteSuccessMsg?.let { snackbarState.showSnackbar(it); quoteSuccessMsg = null }
     }
 
 
@@ -383,8 +391,10 @@ fun DriverTripDetailScreen(
                 }
             }
 
-            // ── Earnings ──────────────────────────────────────────────────
-            if (dto.quotedAmount != null) {
+            // ── Earnings / quoted amount ───────────────────────────────────
+            val displayAmount = activeQuoteAmount ?: dto.quotedAmount
+            if (displayAmount != null) {
+                val isPending = currentStatus == "QUOTE_SENT" && activeQuoteId != null
                 Spacer(Modifier.height(20.dp))
                 Surface(
                     shape  = RoundedCornerShape(14.dp),
@@ -396,16 +406,24 @@ fun DriverTripDetailScreen(
                         Icon(Icons.Rounded.Payments, null, tint = KntYellow, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Trip Earnings", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                            Text(
+                                if (isPending) "Your Quote" else "Trip Earnings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = c.textMuted,
+                            )
                             GradientText(
-                                text   = "R${String.format("%.2f", dto.quotedAmount)}",
+                                text   = "R${String.format("%.2f", displayAmount)}",
                                 style  = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                                 colors = listOf(KntYellow, KntOrange),
                             )
                         }
-                        Surface(shape = RoundedCornerShape(8.dp), color = StatusGreen.copy(0.12f)) {
-                            Text("On completion", style = MaterialTheme.typography.labelSmall, color = StatusGreen,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        Surface(shape = RoundedCornerShape(8.dp), color = if (isPending) c.yellow.copy(0.12f) else StatusGreen.copy(0.12f)) {
+                            Text(
+                                if (isPending) "Awaiting response" else "On completion",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isPending) c.yellow else StatusGreen,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            )
                         }
                     }
                 }
