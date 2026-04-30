@@ -1,5 +1,10 @@
 package com.kntransport.app.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,8 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -48,8 +56,8 @@ fun LiveTrackingMapCard(
     LaunchedEffect(driverLatLng) {
         if (driverLatLng != null) {
             cameraPositionState.animate(
-                update        = CameraUpdateFactory.newLatLngZoom(driverLatLng, 15f),
-                durationMs    = 800,
+                update     = CameraUpdateFactory.newLatLngZoom(driverLatLng, 15f),
+                durationMs = 800,
             )
         }
     }
@@ -63,11 +71,14 @@ fun LiveTrackingMapCard(
         label         = "pulseScale",
     )
 
+    // Build the custom vehicle marker bitmap once
+    val vehicleMarker: BitmapDescriptor = remember { buildVehicleMarkerIcon() }
+
     Surface(
-        modifier  = modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
-        color     = c.surface1,
-        border    = BorderStroke(1.dp, c.blue.copy(0.35f)),
+        modifier = modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(16.dp),
+        color    = c.surface1,
+        border   = BorderStroke(1.dp, c.blue.copy(0.35f)),
     ) {
         Column {
             // ── Header row ────────────────────────────────────────────────
@@ -76,19 +87,19 @@ fun LiveTrackingMapCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.MyLocation,
+                    imageVector        = Icons.Rounded.MyLocation,
                     contentDescription = null,
-                    tint     = KntBlueBright,
-                    modifier = Modifier.size(18.dp),
+                    tint               = KntBlueBright,
+                    modifier           = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text  = if (driverName != null) "Tracking $driverName" else "Live Tracking",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = c.textBright,
+                    text     = if (driverName != null) "Tracking $driverName" else "Live Tracking",
+                    style    = MaterialTheme.typography.titleSmall,
+                    color    = c.textBright,
                     modifier = Modifier.weight(1f),
                 )
-                // Live badge
+                // Live / Locating badge
                 if (driverLocation != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -134,9 +145,9 @@ fun LiveTrackingMapCard(
                     modifier            = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
                     uiSettings          = MapUiSettings(
-                        zoomControlsEnabled  = false,
+                        zoomControlsEnabled     = false,
                         myLocationButtonEnabled = false,
-                        mapToolbarEnabled    = false,
+                        mapToolbarEnabled       = false,
                     ),
                     properties = MapProperties(mapType = MapType.NORMAL),
                 ) {
@@ -144,13 +155,14 @@ fun LiveTrackingMapCard(
                         Marker(
                             state   = MarkerState(position = driverLatLng),
                             title   = driverName ?: "Driver",
-                            snippet = "Current location",
-                            icon    = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                            snippet = "Your K&T driver",
+                            icon    = vehicleMarker,
+                            anchor  = androidx.compose.ui.geometry.Offset(0.5f, 0.5f),
                         )
                     }
                 }
 
-                // Overlay gradient at bottom so it blends with the card
+                // Bottom gradient blend
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -165,6 +177,101 @@ fun LiveTrackingMapCard(
             }
         }
     }
+}
+
+/**
+ * Draws a circular KNT-branded marker:
+ *   - Blue filled circle with a thin yellow ring
+ *   - White minibus icon drawn with canvas primitives
+ *   - Small white triangle pointing down as the map pin tail
+ */
+private fun buildVehicleMarkerIcon(): BitmapDescriptor {
+    val size   = 120  // px — large enough to look sharp on hdpi screens
+    val radius = size / 2f
+    val tail   = 20   // height of the downward triangle
+
+    val bmp    = Bitmap.createBitmap(size, size + tail, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+
+    val blue   = android.graphics.Color.parseColor("#1565C0")
+    val yellow = android.graphics.Color.parseColor("#FFC107")
+    val white  = android.graphics.Color.WHITE
+
+    // ── Drop shadow ───────────────────────────────────────────────────────────
+    val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color   = android.graphics.Color.argb(60, 0, 0, 0)
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(radius, radius + 3f, radius - 4f, shadowPaint)
+
+    // ── Yellow outer ring ─────────────────────────────────────────────────────
+    val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = yellow }
+    canvas.drawCircle(radius, radius, radius - 2f, ringPaint)
+
+    // ── Blue filled circle ────────────────────────────────────────────────────
+    val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = blue }
+    canvas.drawCircle(radius, radius, radius - 8f, circlePaint)
+
+    // ── Pin tail (white triangle pointing down) ───────────────────────────────
+    val tailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = blue }
+    val tailPath  = android.graphics.Path().apply {
+        moveTo(radius - 10f, size - 4f)
+        lineTo(radius + 10f, size - 4f)
+        lineTo(radius,       (size + tail).toFloat())
+        close()
+    }
+    canvas.drawPath(tailPath, tailPaint)
+    // yellow border on tail
+    val tailBorder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color   = yellow
+        style   = Paint.Style.STROKE
+        strokeWidth = 2.5f
+    }
+    canvas.drawPath(tailPath, tailBorder)
+
+    // ── Minibus icon (drawn with canvas primitives) ───────────────────────────
+    val cx   = radius
+    val cy   = radius - 4f
+    val wp   = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = white }
+
+    // Bus body
+    val bodyLeft  = cx - 28f; val bodyTop    = cy - 14f
+    val bodyRight = cx + 28f; val bodyBottom = cy + 12f
+    val bodyRect  = RectF(bodyLeft, bodyTop, bodyRight, bodyBottom)
+    canvas.drawRoundRect(bodyRect, 7f, 7f, wp)
+
+    // Windows strip
+    val winPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = blue }
+    val winRect  = RectF(bodyLeft + 4f, bodyTop + 3f, bodyRight - 4f, bodyTop + 12f)
+    canvas.drawRoundRect(winRect, 3f, 3f, winPaint)
+
+    // Window dividers
+    val divPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color       = white
+        strokeWidth = 1.5f
+    }
+    listOf(cx - 8f, cx + 8f).forEach { x ->
+        canvas.drawLine(x, bodyTop + 3f, x, bodyTop + 12f, divPaint)
+    }
+
+    // Wheels
+    val wheelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = blue }
+    val wheelRim   = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = yellow }
+    listOf(cx - 16f, cx + 16f).forEach { wx ->
+        canvas.drawCircle(wx, bodyBottom, 7f, wheelPaint)
+        canvas.drawCircle(wx, bodyBottom, 3f, wheelRim)
+    }
+
+    // K&T label on body
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color     = blue
+        textSize  = 11f
+        typeface  = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("K&T", cx, bodyBottom - 1f, textPaint)
+
+    return BitmapDescriptorFactory.fromBitmap(bmp)
 }
 
 /**
@@ -188,13 +295,10 @@ fun DriverLocationSharingBadge(
     )
 
     Surface(
-        modifier  = modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(14.dp),
-        color     = if (isSharing) KntBlue.copy(0.12f) else c.surface2,
-        border    = BorderStroke(
-            1.dp,
-            if (isSharing) KntBlue.copy(0.5f) else c.borderColor,
-        ),
+        modifier = modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(14.dp),
+        color    = if (isSharing) KntBlue.copy(0.12f) else c.surface2,
+        border   = BorderStroke(1.dp, if (isSharing) KntBlue.copy(0.5f) else c.borderColor),
     ) {
         Row(
             modifier          = Modifier.padding(14.dp),
@@ -204,10 +308,7 @@ fun DriverLocationSharingBadge(
                 modifier = Modifier
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (isSharing) KntBlueBright.copy(alpha = pulseAlpha)
-                        else c.textDim
-                    ),
+                    .background(if (isSharing) KntBlueBright.copy(alpha = pulseAlpha) else c.textDim),
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
@@ -225,11 +326,11 @@ fun DriverLocationSharingBadge(
             Switch(
                 checked         = isSharing,
                 onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor       = KntBlueBright,
-                    checkedTrackColor       = KntBlue.copy(0.4f),
-                    uncheckedThumbColor     = c.textDim,
-                    uncheckedTrackColor     = c.surface2,
+                colors          = SwitchDefaults.colors(
+                    checkedThumbColor   = KntBlueBright,
+                    checkedTrackColor   = KntBlue.copy(0.4f),
+                    uncheckedThumbColor = c.textDim,
+                    uncheckedTrackColor = c.surface2,
                 ),
             )
         }
