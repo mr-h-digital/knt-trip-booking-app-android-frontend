@@ -29,19 +29,21 @@ fun DriverTripsScreen(
 ) {
     val c          = LocalAppColors.current
     val tripsState by viewModel.trips.collectAsState()
-    val tabs       = listOf("Today", "Upcoming", "Completed")
+    val tabs       = listOf("Confirmed", "Today", "Upcoming", "Completed")
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { viewModel.loadTrips() }
 
     val today    = LocalDate.now()
     val allTrips = (tripsState as? ApiResult.Success)?.data ?: emptyList()
+    val activeStatuses = listOf("QUOTE_ACCEPTED", "CONFIRMED", "IN_PROGRESS")
     val filtered = when (selectedTab) {
-        0 -> allTrips.filter {
+        0 -> allTrips.filter { it.status in activeStatuses }
+        1 -> allTrips.filter {
             runCatching { LocalDate.parse(it.date) }.getOrNull() == today &&
             it.status !in listOf("COMPLETED", "CANCELLED")
         }
-        1 -> allTrips.filter {
+        2 -> allTrips.filter {
             runCatching { LocalDate.parse(it.date) }.getOrNull()?.isAfter(today) == true &&
             it.status !in listOf("COMPLETED", "CANCELLED")
         }
@@ -102,7 +104,12 @@ fun DriverTripsScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Icon(Icons.Rounded.DirectionsBus, null, tint = c.textDim, modifier = Modifier.size(52.dp))
                                 Text(
-                                    when (selectedTab) { 0 -> "No trips for today"; 1 -> "No upcoming trips"; else -> "No completed trips" },
+                                    when (selectedTab) {
+                                        0 -> "No confirmed trips"
+                                        1 -> "No trips for today"
+                                        2 -> "No upcoming trips"
+                                        else -> "No completed trips"
+                                    },
                                     style = MaterialTheme.typography.bodyMedium, color = c.textMuted,
                                 )
                             }
