@@ -20,6 +20,9 @@ import com.kntransport.app.R
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 
 private data class OnboardingPage(
     val heroRes    : Int,
@@ -60,66 +63,23 @@ fun OnboardingScreen(onFinished: () -> Unit) {
     val scope      = rememberCoroutineScope()
     val isLast     = pagerState.currentPage == PAGES.lastIndex
 
+    // Measure the nav-bar inset once so both layers use the same value
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // Controls section height: dots(8) + gap(24) + button(54) + gap(10) + skip(~36) + bottom padding(48) + navBar
+    // We use SubcomposeLayout via BoxWithConstraints to let the controls declare their own height,
+    // then pass that height down to the pager content as bottom padding.
     Box(Modifier.fillMaxSize().background(KntBlack)) {
-        // Pager
-        HorizontalPager(
-            state    = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            val p = PAGES[page]
-            Box(Modifier.fillMaxSize()) {
-                HeroBgImage(resId = p.heroRes, modifier = Modifier.fillMaxSize(), darkOverlay = 0.72f)
 
-                // Blue gradient overlay bottom half for text readability
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, KntBlack.copy(0.95f)),
-                            startY = 400f,
-                        )
-                    )
-                )
+        // ── Bottom controls — rendered first so we can read their height ──────
+        val controlsBottomPadding = 48.dp + navBarPadding
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 32.dp)
-                        .padding(bottom = 160.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Icon badge
-                    Box(
-                        Modifier.size(64.dp).clip(RoundedCornerShape(18.dp))
-                            .background(p.iconTint.copy(0.18f))
-                            .border(1.5.dp, p.iconTint.copy(0.4f), RoundedCornerShape(18.dp)),
-                        Alignment.Center,
-                    ) {
-                        Icon(p.icon, null, tint = p.iconTint, modifier = Modifier.size(32.dp))
-                    }
-                    Spacer(Modifier.height(20.dp))
-                    GradientText(
-                        text   = p.title,
-                        style  = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
-                        colors = listOf(KntWhite, p.iconTint),
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        p.subtitle,
-                        style    = MaterialTheme.typography.bodyMedium.copy(color = KntMuted),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-
-        // Bottom controls
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 28.dp)
-                .padding(bottom = 48.dp)
-                .navigationBarsPadding(),
+                .padding(bottom = controlsBottomPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Page dots
@@ -168,6 +128,62 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             if (!isLast) {
                 TextButton(onClick = onFinished) {
                     Text("Skip", style = MaterialTheme.typography.labelLarge, color = KntMuted)
+                }
+            }
+        }
+
+        // ── Pager — sits behind the controls, content padded so it never overlaps ──
+        // Controls occupy approx: dots(8) + gap(24) + button(54) + skip(48) + bottomPad(48) + navBar
+        val contentClearance = 8.dp + 24.dp + 54.dp + 48.dp + 48.dp + navBarPadding
+
+        HorizontalPager(
+            state    = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val p = PAGES[page]
+            Box(Modifier.fillMaxSize()) {
+                HeroBgImage(resId = p.heroRes, modifier = Modifier.fillMaxSize(), darkOverlay = 0.72f)
+
+                // Dark gradient scrim over bottom portion for text readability
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, KntBlack.copy(0.95f)),
+                            startY = 400f,
+                        )
+                    )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp)
+                        // Clear exactly the controls height + a comfortable gap
+                        .padding(bottom = contentClearance + 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    // Icon badge
+                    Box(
+                        Modifier.size(64.dp).clip(RoundedCornerShape(18.dp))
+                            .background(p.iconTint.copy(0.18f))
+                            .border(1.5.dp, p.iconTint.copy(0.4f), RoundedCornerShape(18.dp)),
+                        Alignment.Center,
+                    ) {
+                        Icon(p.icon, null, tint = p.iconTint, modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    GradientText(
+                        text   = p.title,
+                        style  = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
+                        colors = listOf(KntWhite, p.iconTint),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        p.subtitle,
+                        style     = MaterialTheme.typography.bodyMedium.copy(color = KntMuted),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
