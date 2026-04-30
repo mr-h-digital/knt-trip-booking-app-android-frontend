@@ -60,7 +60,18 @@ fun BookTripScreen(
     val timeApiStr  = timeDisplay
 
     val isLoading = createState is ApiResult.Loading
-    val isValid   = pickup.isNotBlank() && dropoff.isNotBlank() && selectedDate != null && selectedTime != null
+    val today     = LocalDate.now()
+    val dateError: String? = when {
+        selectedDate == null -> null
+        selectedDate.isBefore(today) -> "Date cannot be in the past"
+        selectedDate.isEqual(today) && selectedTime != null &&
+            java.time.LocalDateTime.of(selectedDate, selectedTime)
+                .isBefore(java.time.LocalDateTime.now().plusHours(2)) ->
+            "Same-day trips need at least 2 hours notice"
+        else -> null
+    }
+    val isValid = pickup.isNotBlank() && dropoff.isNotBlank() &&
+                  selectedDate != null && selectedTime != null && dateError == null
 
     // Date picker dialog
     if (showDatePicker) {
@@ -202,6 +213,8 @@ fun BookTripScreen(
                         label         = "Date",
                         leadingIcon   = Icons.Rounded.CalendarMonth,
                         readOnly      = true,
+                        isError       = dateError != null,
+                        supportingText = dateError,
                     )
                     Box(Modifier.matchParentSize().clickable { showDatePicker = true })
                 }

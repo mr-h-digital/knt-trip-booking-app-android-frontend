@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +46,7 @@ fun SignUpScreen(
     var confirmPassword  by remember { mutableStateOf("") }
     var passwordVisible  by remember { mutableStateOf(false) }
     var confirmVisible   by remember { mutableStateOf(false) }
+    var termsAccepted    by remember { mutableStateOf(false) }
     var errorMessage     by remember { mutableStateOf<String?>(null) }
     var headerVisible    by remember { mutableStateOf(false) }
     var formVisible      by remember { mutableStateOf(false) }
@@ -273,6 +275,18 @@ fun SignUpScreen(
                             unfocusedContainerColor = c.surface2,
                         ),
                     )
+                    if (password.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        PasswordStrengthIndicator(password = password)
+                        if (password.length < 8) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "Minimum 8 characters required",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
 
                     Spacer(Modifier.height(12.dp))
 
@@ -318,9 +332,10 @@ fun SignUpScreen(
                     Spacer(Modifier.height(28.dp))
 
                     // Register button
+                    val passwordLongEnough = password.length >= 8
                     val canSubmit = fullName.isNotBlank() && email.isNotBlank() && phone.isNotBlank()
-                        && password.isNotBlank() && passwordsMatch && confirmPassword.isNotBlank()
-                        && !isLoading
+                        && passwordLongEnough && passwordsMatch && confirmPassword.isNotBlank()
+                        && termsAccepted && !isLoading
 
                     Button(
                         onClick  = {
@@ -361,16 +376,43 @@ fun SignUpScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                    // Terms note
-                    Text(
-                        text  = "By creating an account you agree to our Terms of Service and Privacy Policy.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = c.textDim,
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // Terms & Conditions checkbox
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (termsAccepted) c.blue.copy(0.08f) else c.surface2.copy(0.5f)
+                            )
+                            .border(
+                                1.dp,
+                                if (termsAccepted) c.blue.copy(0.4f) else c.borderColor,
+                                RoundedCornerShape(10.dp),
+                            )
+                            .clickable { termsAccepted = !termsAccepted }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked         = termsAccepted,
+                            onCheckedChange = { termsAccepted = it },
+                            colors          = CheckboxDefaults.colors(
+                                checkedColor        = c.blue,
+                                uncheckedColor      = c.textDim,
+                                checkmarkColor      = Color.White,
+                            ),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text  = "I have read and agree to the Terms of Service and Privacy Policy.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (termsAccepted) c.textBright else c.textMuted,
+                            ),
+                        )
+                    }
 
                     Spacer(Modifier.height(28.dp))
 
