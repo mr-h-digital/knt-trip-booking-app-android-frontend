@@ -73,21 +73,25 @@ fun DriverTripDetailScreen(
     var pendingStatus      by remember { mutableStateOf<String?>(null) }
     var errorMessage       by remember { mutableStateOf<String?>(null) }
 
-    // Quote flow state
+    // Quote flow state — seed from myQuote if backend returns it
     val quoteState       by viewModel.quoteState.collectAsState()
     val cancelQuoteState by viewModel.cancelQuoteState.collectAsState()
     var showQuoteSheet   by remember { mutableStateOf(false) }
     var editingQuote     by remember { mutableStateOf<QuoteDto?>(null) }
-    var activeQuoteId    by remember(dto.id) { mutableStateOf<String?>(null) }
+    var activeQuoteId    by remember(dto.id) { mutableStateOf<String?>(dto.myQuote?.id) }
+    var activeQuoteAmount by remember(dto.id) { mutableStateOf<Double?>(dto.myQuote?.amount ?: dto.quotedAmount) }
+    var activeQuoteNote  by remember(dto.id) { mutableStateOf(dto.myQuote?.driverNote ?: "") }
 
     // Track the quote this driver sent (stored locally after creation)
     LaunchedEffect(quoteState) {
         when (val s = quoteState) {
             is ApiResult.Success -> {
-                activeQuoteId  = s.data.id
-                currentStatus  = "QUOTE_SENT"
-                showQuoteSheet = false
-                editingQuote   = null
+                activeQuoteId     = s.data.id
+                activeQuoteAmount = s.data.amount
+                activeQuoteNote   = s.data.driverNote
+                currentStatus     = "QUOTE_SENT"
+                showQuoteSheet    = false
+                editingQuote      = null
                 viewModel.resetQuoteState()
             }
             is ApiResult.Error -> { errorMessage = s.message; viewModel.resetQuoteState() }
@@ -428,8 +432,8 @@ fun DriverTripDetailScreen(
                                     id            = activeQuoteId!!,
                                     referenceId   = dto.id,
                                     referenceType = "TRIP",
-                                    amount        = dto.quotedAmount ?: 0.0,
-                                    driverNote    = "",
+                                    amount        = activeQuoteAmount ?: 0.0,
+                                    driverNote    = activeQuoteNote,
                                 )
                                 showQuoteSheet = true
                             },

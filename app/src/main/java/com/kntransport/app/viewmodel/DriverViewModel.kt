@@ -43,7 +43,13 @@ class DriverViewModel : ViewModel() {
     fun loadTrip(id: String) {
         viewModelScope.launch {
             _selectedTrip.value = ApiResult.Loading
-            _selectedTrip.value = repo.getDriverTrip(id)
+            val result = repo.getDriverTrip(id)
+            _selectedTrip.value = if (result is ApiResult.Error) {
+                // Trip not yet assigned to this driver — try the available-trips pool
+                repo.getAvailableTripById(id)
+            } else {
+                result
+            }
         }
     }
 

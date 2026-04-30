@@ -69,6 +69,9 @@ interface ApiService {
     @GET("api/quotes/{id}")
     suspend fun getQuote(@Path("id") id: String): Response<QuoteDto>
 
+    @GET("api/trips/{id}/quotes")
+    suspend fun getTripQuotes(@Path("id") id: String): Response<List<QuoteDto>>
+
     @POST("api/quotes/{id}/respond")
     suspend fun respondToQuote(
         @Path("id") id: String,
@@ -185,6 +188,12 @@ interface ApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20,
     ): Response<PagedResponse<TripBookingDto>>
+
+    @GET("api/driver/available-trips/{id}")
+    suspend fun getAvailableTripById(@Path("id") id: String): Response<TripBookingDto>
+
+    @GET("api/driver/trips/{id}/my-quote")
+    suspend fun getMyQuoteForTrip(@Path("id") id: String): Response<QuoteDto>
 
     @POST("api/driver/trips/{id}/quote")
     suspend fun createDriverQuote(

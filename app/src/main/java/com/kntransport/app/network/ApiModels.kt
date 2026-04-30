@@ -72,6 +72,7 @@ data class TripBookingDto(
     @SerializedName("vehicleInfo")    val vehicleInfo    : String? = null,
     @SerializedName("vehiclePlate")   val vehiclePlate   : String? = null,
     @SerializedName("rating")         val rating         : Int? = null,
+    @SerializedName("myQuote")        val myQuote        : QuoteDto? = null,
 )
 
 data class CreateTripRequest(

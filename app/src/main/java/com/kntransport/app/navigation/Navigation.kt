@@ -227,7 +227,7 @@ fun KntNavHost(
                 quoteId = quoteId,
                 type    = type,
                 onBack  = { navController.popBackStack() },
-                onDone  = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
+                onDone  = { navController.popBackStack() },
             )
         }
 

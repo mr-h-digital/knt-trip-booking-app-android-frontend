@@ -21,6 +21,7 @@ import coil3.request.ImageRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
 import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.network.TripBookingDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
@@ -62,8 +63,12 @@ fun TripDetailScreen(
     val tripState      by viewModel.selectedTrip.collectAsState()
     val cancelState    by viewModel.cancelState.collectAsState()
     val driverLocation by viewModel.driverLocation.collectAsStateWithLifecycle()
+    val quotesState    by viewModel.tripQuotes.collectAsState()
 
-    LaunchedEffect(tripId) { viewModel.loadTrip(tripId) }
+    LaunchedEffect(tripId) {
+        viewModel.loadTrip(tripId)
+        viewModel.loadTripQuotes(tripId)
+    }
 
     // Show loading while fetching
     if (tripState is ApiResult.Loading || tripState == null) {
@@ -231,28 +236,39 @@ fun TripDetailScreen(
                 InfoRow(Icons.Rounded.Person,     "Passengers", dto.passengers.toString())
             }
 
-            // ── Quote card ────────────────────────────────────────────────
-            if (dto.quotedAmount != null && currentStatus == "QUOTE_SENT") {
+            // ── Quotes list (commuter chooses one) ────────────────────────
+            if (currentStatus == "QUOTE_SENT") {
                 Spacer(Modifier.height(16.dp))
-                Surface(
-                    shape    = RoundedCornerShape(16.dp),
-                    color    = c.yellow.copy(alpha = 0.08f),
-                    border   = BorderStroke(1.5.dp, c.yellow.copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.RequestQuote, null, tint = c.yellow, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Quote Received", style = MaterialTheme.typography.titleMedium, color = c.yellow)
+                SectionHeader(title = "Driver Quotes")
+                Spacer(Modifier.height(8.dp))
+                when (val qs = quotesState) {
+                    is ApiResult.Loading -> CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(12.dp),
+                        color = c.blue,
+                    )
+                    is ApiResult.Error -> Text(
+                        qs.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StatusRed,
+                    )
+                    is ApiResult.Success -> {
+                        val activeQuotes = qs.data.filter { !it.cancelled }
+                        if (activeQuotes.isEmpty()) {
+                            Text(
+                                "No quotes received yet.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = c.textMuted,
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                activeQuotes.forEach { quote ->
+                                    DriverQuoteCard(
+                                        quote   = quote,
+                                        onClick = { onQuoteReview(quote.id) },
+                                    )
+                                }
+                            }
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Text("R${String.format("%.2f", dto.quotedAmount)}", style = MaterialTheme.typography.displaySmall.copy(color = c.yellow))
-                        Text("one-way trip", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
-                        Spacer(Modifier.height(16.dp))
-                        Text("Payment is due upfront once you accept this quote.", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
-                        Spacer(Modifier.height(16.dp))
-                        KntPrimaryButton(text = "Review & Accept Quote", onClick = { onQuoteReview(dto.id) }, icon = Icons.Rounded.CheckCircle)
                     }
                 }
             }
@@ -400,6 +416,70 @@ fun TripDetailScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun DriverQuoteCard(quote: QuoteDto, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    Surface(
+        shape    = RoundedCornerShape(14.dp),
+        color    = c.surface2,
+        border   = BorderStroke(1.dp, c.yellow.copy(0.35f)),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(KntYellow.copy(0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Person,
+                    contentDescription = null,
+                    tint = KntYellow,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    quote.driverName ?: "Driver",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = c.textBright,
+                )
+                if (quote.driverNote.isNotBlank()) {
+                    Text(
+                        quote.driverNote,
+                        style   = MaterialTheme.typography.bodySmall,
+                        color   = c.textMuted,
+                        maxLines = 2,
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "R${String.format("%.2f", quote.amount)}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = KntYellow,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                    ),
+                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = KntBlue.copy(0.12f),
+                ) {
+                    Text(
+                        "Review",
+                        style    = MaterialTheme.typography.labelSmall.copy(color = KntBlueBright),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -31,6 +31,12 @@ class TripRepository {
     suspend fun rateTrip(id: String, rating: Int, comment: String = "") =
         safeApiCall { api.rateTrip(id, RateTripRequest(rating, comment)) }
 
+    suspend fun getQuote(quoteId: String) =
+        safeApiCall { api.getQuote(quoteId) }
+
+    suspend fun getTripQuotes(tripId: String) =
+        safeApiCall { api.getTripQuotes(tripId) }
+
     suspend fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null) =
         safeApiCall { api.respondToQuote(id, QuoteAcceptRequest(accepted, paymentCycle)) }
 
@@ -53,6 +59,12 @@ class TripRepository {
 
     suspend fun getAvailableTrips(page: Int = 0) =
         safeApiCall { api.getAvailableTrips(page) }
+
+    suspend fun getAvailableTripById(id: String) =
+        safeApiCall { api.getAvailableTripById(id) }
+
+    suspend fun getMyQuoteForTrip(tripId: String) =
+        safeApiCall { api.getMyQuoteForTrip(tripId) }
 
     suspend fun createDriverQuote(tripId: String, amount: Double, note: String) =
         safeApiCall { api.createDriverQuote(tripId, DriverQuoteRequest(amount, note)) }

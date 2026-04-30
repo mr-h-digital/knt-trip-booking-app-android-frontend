@@ -35,6 +35,12 @@ class TripViewModel : ViewModel() {
     private val _quoteState = MutableStateFlow<ApiResult<QuoteDto>?>(null)
     val quoteState: StateFlow<ApiResult<QuoteDto>?> = _quoteState
 
+    private val _selectedQuote = MutableStateFlow<ApiResult<QuoteDto>?>(null)
+    val selectedQuote: StateFlow<ApiResult<QuoteDto>?> = _selectedQuote
+
+    private val _tripQuotes = MutableStateFlow<ApiResult<List<QuoteDto>>>(ApiResult.Loading)
+    val tripQuotes: StateFlow<ApiResult<List<QuoteDto>>> = _tripQuotes
+
     private val _driverLocation = MutableStateFlow<DriverLocationDto?>(null)
     val driverLocation: StateFlow<DriverLocationDto?> = _driverLocation
 
@@ -84,6 +90,20 @@ class TripViewModel : ViewModel() {
         viewModelScope.launch {
             _rateState.value = ApiResult.Loading
             _rateState.value = repo.rateTrip(id, rating, comment)
+        }
+    }
+
+    fun loadQuote(quoteId: String) {
+        viewModelScope.launch {
+            _selectedQuote.value = ApiResult.Loading
+            _selectedQuote.value = repo.getQuote(quoteId)
+        }
+    }
+
+    fun loadTripQuotes(tripId: String) {
+        viewModelScope.launch {
+            _tripQuotes.value = ApiResult.Loading
+            _tripQuotes.value = repo.getTripQuotes(tripId)
         }
     }
 

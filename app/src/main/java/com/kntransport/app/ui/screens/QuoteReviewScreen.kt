@@ -8,11 +8,14 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kntransport.app.data.*
 import com.kntransport.app.network.ApiResult
+import com.kntransport.app.network.QuoteDto
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
 import com.kntransport.app.viewmodel.TripViewModel
@@ -25,20 +28,13 @@ fun QuoteReviewScreen(
     onDone   : () -> Unit,
     viewModel: TripViewModel = viewModel(),
 ) {
-    val c          = LocalAppColors.current
-    val quoteState by viewModel.quoteState.collectAsState()
+    val c           = LocalAppColors.current
+    val quoteState  by viewModel.quoteState.collectAsState()
+    val quoteDetail by viewModel.selectedQuote.collectAsState()
 
-    val isTrip     = type == "TRIP"
-    val tripState  by viewModel.selectedTrip.collectAsState()
-    val amount     = (tripState as? ApiResult.Success)?.data?.quotedAmount ?: 0.0
-    val tripDto    = (tripState as? ApiResult.Success)?.data
-    val paymentCycle = tripDto?.let {
-        if (!isTrip) PaymentCycle.MONTHLY else null
-    }
+    val isTrip = type == "TRIP"
 
-    LaunchedEffect(quoteId) {
-        if (isTrip) viewModel.loadTrip(quoteId)
-    }
+    LaunchedEffect(quoteId) { viewModel.loadQuote(quoteId) }
 
     var selectedCycle     by remember { mutableStateOf(PaymentCycle.MONTHLY) }
     var localDecision     by remember { mutableStateOf<Boolean?>(null) }
@@ -49,10 +45,7 @@ fun QuoteReviewScreen(
 
     LaunchedEffect(quoteState) {
         when (val s = quoteState) {
-            is ApiResult.Success -> {
-                viewModel.resetQuoteState()
-                // Navigate to result screen based on localDecision
-            }
+            is ApiResult.Success -> viewModel.resetQuoteState()
             is ApiResult.Error -> { errorMessage = s.message; viewModel.resetQuoteState() }
             else -> {}
         }
@@ -70,7 +63,7 @@ fun QuoteReviewScreen(
             titleContentColor = c.textBright,
             textContentColor  = c.textMuted,
             title = { Text("Decline Quote?") },
-            text  = { Text("Declining this quote will cancel the booking. K&T Transport will be notified.") },
+            text  = { Text("Declining this quote will not cancel your booking. Other driver quotes will still be available.") },
             confirmButton = {
                 Button(onClick = {
                     showDeclineDialog = false
@@ -86,8 +79,7 @@ fun QuoteReviewScreen(
         )
     }
 
-    // Show result screens once API responds (or immediately if already decided)
-    val showResult = quoteState is ApiResult.Success || (localDecision != null && quoteState == null)
+    val showResult = localDecision != null && (quoteState == null || quoteState is ApiResult.Success)
 
     KntScaffold(title = "Review Quote", onBack = onBack, snackbarHost = { SnackbarHost(snackbarState) }) { pv ->
         if (showResult) {
@@ -99,120 +91,162 @@ fun QuoteReviewScreen(
             return@KntScaffold
         }
 
-        when (localDecision) {
-            true -> { QuoteAcceptedScreen(onDone = onDone); return@KntScaffold }
-            false -> { QuoteDeclinedScreen(onDone = onDone); return@KntScaffold }
-            null -> Column(
-                Modifier.fillMaxSize().padding(pv).verticalScroll(rememberScrollState()).padding(16.dp)
+        // Loading state for the quote detail
+        if (quoteDetail == null || quoteDetail is ApiResult.Loading) {
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = c.blue)
+            }
+            return@KntScaffold
+        }
+
+        if (quoteDetail is ApiResult.Error) {
+            Box(Modifier.fillMaxSize().padding(pv), contentAlignment = Alignment.Center) {
+                ErrorState(
+                    message = (quoteDetail as ApiResult.Error).message,
+                    onRetry = { viewModel.loadQuote(quoteId) },
+                )
+            }
+            return@KntScaffold
+        }
+
+        val dto: QuoteDto = (quoteDetail as ApiResult.Success<QuoteDto>).data
+
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(pv)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        ) {
+            Spacer(Modifier.height(12.dp))
+
+            // Quote amount hero
+            Surface(
+                shape    = RoundedCornerShape(20.dp),
+                color    = c.surface1,
+                border   = BorderStroke(1.5.dp, c.yellow.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Spacer(Modifier.height(12.dp))
-
-                // Quote amount hero
-                Surface(
-                    shape    = RoundedCornerShape(20.dp),
-                    color    = c.surface1,
-                    border   = BorderStroke(1.5.dp, c.yellow.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.RequestQuote, null, tint = c.yellow, modifier = Modifier.size(40.dp))
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            "R${String.format("%.2f", amount)}",
-                            style = MaterialTheme.typography.displayMedium.copy(color = c.yellow),
-                        )
-                        Text(
-                            if (isTrip) "one-way trip" else "per person",
-                            style = MaterialTheme.typography.bodySmall, color = c.textMuted,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            if (isTrip) "Payment upfront upon acceptance"
-                            else "Choose your preferred payment cycle below",
-                            style = MaterialTheme.typography.bodySmall, color = c.textMuted,
-                        )
-                    }
-                }
-
-                // Lift club payment cycle selector
-                if (!isTrip) {
-                    Spacer(Modifier.height(20.dp))
-                    SectionHeader(title = "Payment Cycle")
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PaymentCycle.entries.forEach { cycle ->
-                            PaymentCycleChip(
-                                cycle    = cycle,
-                                selected = cycle == selectedCycle,
-                                onClick  = { selectedCycle = cycle },
-                                modifier = Modifier.weight(1f),
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Rounded.RequestQuote, null, tint = c.yellow, modifier = Modifier.size(40.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "R${String.format("%.2f", dto.amount)}",
+                        style = MaterialTheme.typography.displayMedium.copy(color = c.yellow),
+                    )
+                    Text(
+                        if (isTrip) "one-way trip" else "per person",
+                        style = MaterialTheme.typography.bodySmall, color = c.textMuted,
+                    )
+                    if (dto.driverName != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(c.blue.copy(0.15f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    dto.driverName.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = c.blue,
+                                )
+                            }
+                            Text(
+                                dto.driverName,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = c.textBright,
                             )
                         }
                     }
-                }
-
-                // What's included
-                Spacer(Modifier.height(20.dp))
-                SectionHeader(title = "What's Included")
-                KntCard {
-                    listOf(
-                        Icons.Rounded.DirectionsCar to "Door-to-door transport",
-                        Icons.Rounded.Person to "Professional K&T driver",
-                        Icons.Rounded.Security to "Safe & insured vehicle",
-                        Icons.Rounded.Support to "24/7 support via WhatsApp",
-                    ).forEach { (icon, text) ->
-                        Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(icon, null, tint = StatusGreen, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(text, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
-                        }
-                    }
-                }
-
-                // Trip / club summary
-                Spacer(Modifier.height(20.dp))
-                SectionHeader(title = "Booking Summary")
-                KntCard {
-                    if (isTrip && tripDto != null) {
-                        InfoRow(Icons.Rounded.LocationOn, "Pickup",     tripDto.pickupAddress)
-                        InfoRow(Icons.Rounded.Flag,       "Drop-off",   tripDto.dropAddress)
-                        InfoRow(Icons.Rounded.Schedule,   "Date & Time","${tripDto.date} · ${tripDto.time}")
-                        InfoRow(Icons.Rounded.Person,     "Passengers", tripDto.passengers.toString())
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Accept / Decline
-                KntPrimaryButton(
-                    text    = if (isLoading) "Processing…" else "Accept Quote — R${String.format("%.2f", amount)}",
-                    onClick = {
-                        localDecision = true
-                        viewModel.respondToQuote(
-                            quoteId,
-                            accepted     = true,
-                            paymentCycle = if (!isTrip) selectedCycle.name else null,
+                    if (dto.driverNote.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "\"${dto.driverNote}\"",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = c.textMuted,
                         )
-                    },
-                    enabled = !isLoading,
-                    icon    = Icons.Rounded.CheckCircle,
-                )
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick  = { showDeclineDialog = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    border   = BorderStroke(1.dp, StatusRed.copy(alpha = 0.6f)),
-                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
-                ) {
-                    Icon(Icons.Rounded.Cancel, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Decline Quote", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (isTrip) "Payment upfront upon acceptance"
+                        else "Choose your preferred payment cycle below",
+                        style = MaterialTheme.typography.bodySmall, color = c.textMuted,
+                    )
                 }
+            }
 
-                Spacer(Modifier.height(32.dp))
-            } // null branch Column
-        } // when(localDecision)
-    } // KntScaffold
+            // Lift club payment cycle selector
+            if (!isTrip) {
+                Spacer(Modifier.height(20.dp))
+                SectionHeader(title = "Payment Cycle")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PaymentCycle.entries.forEach { cycle ->
+                        PaymentCycleChip(
+                            cycle    = cycle,
+                            selected = cycle == selectedCycle,
+                            onClick  = { selectedCycle = cycle },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            // What's included
+            Spacer(Modifier.height(20.dp))
+            SectionHeader(title = "What's Included")
+            KntCard {
+                listOf(
+                    Icons.Rounded.DirectionsCar to "Door-to-door transport",
+                    Icons.Rounded.Person        to "Professional K&T driver",
+                    Icons.Rounded.Security      to "Safe & insured vehicle",
+                    Icons.Rounded.Support       to "24/7 support via WhatsApp",
+                ).forEach { (icon, text) ->
+                    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(icon, null, tint = StatusGreen, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(text, style = MaterialTheme.typography.bodyMedium, color = c.textBright)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Accept / Decline
+            KntPrimaryButton(
+                text    = if (isLoading) "Processing…" else "Accept Quote — R${String.format("%.2f", dto.amount)}",
+                onClick = {
+                    localDecision = true
+                    viewModel.respondToQuote(
+                        quoteId,
+                        accepted     = true,
+                        paymentCycle = if (!isTrip) selectedCycle.name else null,
+                    )
+                },
+                enabled = !isLoading,
+                icon    = Icons.Rounded.CheckCircle,
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick  = { showDeclineDialog = true },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(14.dp),
+                border   = BorderStroke(1.dp, StatusRed.copy(alpha = 0.6f)),
+                colors   = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
+            ) {
+                Icon(Icons.Rounded.Cancel, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Decline Quote", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
+            }
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
 }
 
 @Composable
@@ -253,7 +287,7 @@ private fun QuoteAcceptedScreen(onDone: () -> Unit) {
             }
             Text("Booking Confirmed!", style = MaterialTheme.typography.headlineMedium, color = c.textBright)
             Text(
-                "Your quote has been accepted. K&T Transport will be in touch with driver and vehicle details shortly.",
+                "Your quote has been accepted. The driver will be notified and your trip is now confirmed.",
                 style = MaterialTheme.typography.bodyMedium, color = c.textMuted,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -278,12 +312,12 @@ private fun QuoteDeclinedScreen(onDone: () -> Unit) {
             }
             Text("Quote Declined", style = MaterialTheme.typography.headlineMedium, color = c.textBright)
             Text(
-                "You've declined the quote. K&T Transport has been notified.",
+                "You've declined this quote. You can still review other driver quotes on your trip.",
                 style = MaterialTheme.typography.bodyMedium, color = c.textMuted,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             Spacer(Modifier.height(8.dp))
-            KntPrimaryButton(text = "Back to Home", onClick = onDone, icon = Icons.Rounded.Home)
+            KntPrimaryButton(text = "Back to Trip", onClick = onDone, icon = Icons.Rounded.ArrowBack)
         }
     }
 }
