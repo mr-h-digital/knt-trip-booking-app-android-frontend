@@ -18,9 +18,15 @@ object ApiClient {
     private var retrofit: Retrofit? = null
     private var tokenManager: TokenManager? = null
 
+    /** Shared OkHttpClient with trust-all SSL in debug — also used by Coil for image loading. */
+    var httpClient: OkHttpClient = OkHttpClient()
+        private set
+
     fun init(context: Context) {
         tokenManager = TokenManager(context)
-        retrofit     = buildRetrofit(tokenManager!!)
+        val baseClient = buildBaseClient()
+        httpClient = baseClient
+        retrofit   = buildRetrofit(tokenManager!!, baseClient)
     }
 
     val service: ApiService
@@ -30,22 +36,13 @@ object ApiClient {
     fun getTokenManager(): TokenManager =
         tokenManager ?: error("ApiClient.init(context) must be called first")
 
-    private fun buildRetrofit(tm: TokenManager): Retrofit {
-        val logging = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-                    else HttpLoggingInterceptor.Level.NONE
-        }
-
-        val clientBuilder = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(tm))
-            .addInterceptor(logging)
+    /** Builds a base OkHttpClient with trust-all SSL in debug (no auth interceptor — used by Coil). */
+    fun buildBaseClient(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
 
-        // Trust all certificates in debug builds to work around Railway's
-        // certificate chain not being fully trusted by Android's CA store.
-        // Production builds use the default strict SSL validation.
         if (BuildConfig.DEBUG) {
             val trustAll = object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) = Unit
@@ -55,14 +52,26 @@ object ApiClient {
             val sslContext = SSLContext.getInstance("TLS").apply {
                 init(null, arrayOf<TrustManager>(trustAll), SecureRandom())
             }
-            clientBuilder
-                .sslSocketFactory(sslContext.socketFactory, trustAll)
-                .hostnameVerifier { _, _ -> true }
+            builder.sslSocketFactory(sslContext.socketFactory, trustAll)
+                   .hostnameVerifier { _, _ -> true }
         }
+        return builder.build()
+    }
+
+    private fun buildRetrofit(tm: TokenManager, baseClient: OkHttpClient): Retrofit {
+        val logging = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
+        }
+
+        val client = baseClient.newBuilder()
+            .addInterceptor(AuthInterceptor(tm))
+            .addInterceptor(logging)
+            .build()
 
         return Retrofit.Builder()
             .baseUrl(BuildConfig.ACTIVE_API_URL)
-            .client(clientBuilder.build())
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

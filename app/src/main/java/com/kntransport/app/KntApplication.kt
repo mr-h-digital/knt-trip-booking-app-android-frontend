@@ -15,7 +15,9 @@ class KntApplication : Application(), SingletonImageLoader.Factory {
 
     override fun newImageLoader(context: android.content.Context): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory()) }
+            // Reuse the same OkHttpClient as the API — inherits trust-all SSL in debug
+            // so corporate HTTPS inspection doesn't block Cloudflare R2 image loads
+            .components { add(OkHttpNetworkFetcherFactory(callFactory = { ApiClient.httpClient })) }
             .build()
 
     override fun onCreate() {
