@@ -158,23 +158,28 @@ fun UserAvatar(
         else -> null
     }
 
-    // Reset failed state whenever the URL changes so a newly uploaded avatar always tries to load
-    var imageLoadFailed by remember(imageData) { mutableStateOf(false) }
+    // null  = loading/unknown, true = loaded OK, false = failed
+    var imageState by remember(imageData) { mutableStateOf<Boolean?>(null) }
 
     Box(baseMod, contentAlignment = Alignment.Center) {
-        // Always render AsyncImage when we have a URL — show initials on top until load succeeds
         if (imageData != null) {
             AsyncImage(
                 model              = ImageRequest.Builder(context).data(imageData).build(),
                 contentDescription = name,
                 contentScale       = ContentScale.Crop,
                 modifier           = Modifier.fillMaxSize(),
-                onSuccess          = { imageLoadFailed = false },
-                onError            = { imageLoadFailed = true },
+                onSuccess          = {
+                    android.util.Log.d("UserAvatar", "Loaded OK: $imageData")
+                    imageState = true
+                },
+                onError            = { err ->
+                    android.util.Log.e("UserAvatar", "Failed: $imageData — ${err.result.throwable}")
+                    imageState = false
+                },
             )
         }
-        // Show initials as placeholder: when no URL, or while/after load fails
-        if (imageData == null || imageLoadFailed) {
+        // Show initials while loading (null) or on failure (false); hide on success (true)
+        if (imageData == null || imageState != true) {
             Box(
                 Modifier.fillMaxSize()
                     .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
