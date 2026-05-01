@@ -38,7 +38,10 @@ class UserViewModel : ViewModel() {
     fun updateProfile(name: String, email: String, phone: String) {
         viewModelScope.launch {
             _updateState.value = ApiResult.Loading
-            _updateState.value = repo.updateProfile(name, email, phone)
+            val result = repo.updateProfile(name, email, phone)
+            _updateState.value = result
+            // Keep _profile in sync so the avatar/name update is visible immediately on back-navigation
+            if (result is ApiResult.Success) _profile.value = result
         }
     }
 
@@ -49,7 +52,9 @@ class UserViewModel : ViewModel() {
                 _updateState.value = ApiResult.Error("Could not read image file")
                 return@launch
             }
-            _updateState.value = repo.uploadAvatar(file)
+            val result = repo.uploadAvatar(file)
+            _updateState.value = result
+            if (result is ApiResult.Success) _profile.value = result
         }
     }
 
@@ -60,7 +65,7 @@ class UserViewModel : ViewModel() {
                 _updateState.value = ApiResult.Error("Could not read image file")
                 return@launch
             }
-            // Upload avatar first, then apply any text field changes.
+            // Upload avatar first, then apply any text field changes
             val avatarResult = repo.uploadAvatar(file)
             if (avatarResult is ApiResult.Error) {
                 _updateState.value = avatarResult
@@ -69,18 +74,20 @@ class UserViewModel : ViewModel() {
             val savedUser = (avatarResult as? ApiResult.Success)?.data
             val textDirty = savedUser != null &&
                 (savedUser.name != name || savedUser.email != email || savedUser.phone != phone)
-            _updateState.value = if (textDirty) {
-                repo.updateProfile(name, email, phone)
-            } else {
-                avatarResult
-            }
+            val finalResult = if (textDirty) repo.updateProfile(name, email, phone) else avatarResult
+            _updateState.value = finalResult
+            // Always push the latest user back into _profile so all screens update immediately
+            if (finalResult is ApiResult.Success) _profile.value = finalResult
+            else if (avatarResult is ApiResult.Success) _profile.value = avatarResult
         }
     }
 
     fun acceptTerms() {
         viewModelScope.launch {
             _updateState.value = ApiResult.Loading
-            _updateState.value = repo.acceptTerms()
+            val result = repo.acceptTerms()
+            _updateState.value = result
+            if (result is ApiResult.Success) _profile.value = result
         }
     }
 
