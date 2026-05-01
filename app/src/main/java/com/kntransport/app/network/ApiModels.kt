@@ -74,6 +74,7 @@ data class TripBookingDto(
     @SerializedName("vehiclePlate")   val vehiclePlate   : String? = null,
     @SerializedName("rating")         val rating         : Int? = null,
     @SerializedName("myQuote")        val myQuote        : QuoteDto? = null,
+    @SerializedName("paymentMethod")  val paymentMethod  : String? = null,
 )
 
 data class CreateTripRequest(
@@ -127,8 +128,9 @@ data class QuoteDto(
 )
 
 data class QuoteAcceptRequest(
-    @SerializedName("accepted")      val accepted      : Boolean,
-    @SerializedName("paymentCycle")  val paymentCycle  : String? = null,
+    @SerializedName("accepted")       val accepted       : Boolean,
+    @SerializedName("paymentCycle")   val paymentCycle   : String? = null,
+    @SerializedName("paymentMethod")  val paymentMethod  : String? = null,
 )
 
 data class DriverQuoteRequest(

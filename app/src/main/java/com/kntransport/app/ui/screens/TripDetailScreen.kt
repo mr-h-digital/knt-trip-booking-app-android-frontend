@@ -240,6 +240,36 @@ fun TripDetailScreen(
                 InfoRow(Icons.Rounded.Person,     "Passengers", dto.passengers.toString())
             }
 
+            // ── Payment method badge ──────────────────────────────────────
+            if (dto.paymentMethod != null) {
+                Spacer(Modifier.height(8.dp))
+                val isCash = dto.paymentMethod == "CASH"
+                Surface(
+                    shape  = RoundedCornerShape(12.dp),
+                    color  = if (isCash) StatusGreen.copy(0.08f) else KntBlue.copy(0.08f),
+                    border = BorderStroke(1.dp, if (isCash) StatusGreen.copy(0.3f) else KntBlue.copy(0.3f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            if (isCash) Icons.Rounded.Payments else Icons.Rounded.CreditCard,
+                            null,
+                            tint     = if (isCash) StatusGreen else KntBlue,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            if (isCash) "Payment method: Cash on pickup" else "Payment method: Card / EFT",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isCash) StatusGreen else KntBlue,
+                        )
+                    }
+                }
+            }
+
             // ── Quotes list (commuter chooses one) ────────────────────────
             if (currentStatus == "QUOTE_SENT") {
                 Spacer(Modifier.height(16.dp))

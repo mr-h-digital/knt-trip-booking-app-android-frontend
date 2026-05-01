@@ -37,8 +37,8 @@ class TripRepository {
     suspend fun getTripQuotes(tripId: String) =
         safeApiCall { api.getTripQuotes(tripId) }
 
-    suspend fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null) =
-        safeApiCall { api.respondToQuote(id, QuoteAcceptRequest(accepted, paymentCycle)) }
+    suspend fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null, paymentMethod: String? = null) =
+        safeApiCall { api.respondToQuote(id, QuoteAcceptRequest(accepted, paymentCycle, paymentMethod)) }
 
     // ── Driver ────────────────────────────────────────────────────────────────
 

@@ -391,6 +391,36 @@ fun DriverTripDetailScreen(
                 }
             }
 
+            // ── Payment method badge ──────────────────────────────────────
+            if (dto.paymentMethod != null) {
+                Spacer(Modifier.height(12.dp))
+                val isCash = dto.paymentMethod == "CASH"
+                Surface(
+                    shape  = RoundedCornerShape(12.dp),
+                    color  = if (isCash) StatusGreen.copy(0.10f) else c.blue.copy(0.10f),
+                    border = BorderStroke(1.dp, if (isCash) StatusGreen.copy(0.35f) else c.blue.copy(0.35f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            if (isCash) Icons.Rounded.Payments else Icons.Rounded.CreditCard,
+                            null,
+                            tint     = if (isCash) StatusGreen else c.blue,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            if (isCash) "Commuter paying cash on pickup" else "Commuter paying by card",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isCash) StatusGreen else c.blue,
+                        )
+                    }
+                }
+            }
+
             // ── Earnings / quoted amount ───────────────────────────────────
             val displayAmount = activeQuoteAmount ?: dto.quotedAmount
             if (displayAmount != null) {

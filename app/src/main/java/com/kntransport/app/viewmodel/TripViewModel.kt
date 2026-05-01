@@ -107,10 +107,10 @@ class TripViewModel : ViewModel() {
         }
     }
 
-    fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null) {
+    fun respondToQuote(id: String, accepted: Boolean, paymentCycle: String? = null, paymentMethod: String? = null) {
         viewModelScope.launch {
             _quoteState.value = ApiResult.Loading
-            _quoteState.value = repo.respondToQuote(id, accepted, paymentCycle)
+            _quoteState.value = repo.respondToQuote(id, accepted, paymentCycle, paymentMethod)
         }
     }
 

@@ -267,6 +267,36 @@ fun AdminTripDetailScreen(
                     }
                 }
 
+                // Payment method
+                if (dto.paymentMethod != null) {
+                    SectionHeader(title = "Payment")
+                    val isCash = dto.paymentMethod == "CASH"
+                    Surface(
+                        shape  = RoundedCornerShape(14.dp),
+                        color  = if (isCash) StatusGreen.copy(0.08f) else c.blue.copy(0.08f),
+                        border = BorderStroke(1.dp, if (isCash) StatusGreen.copy(0.3f) else c.blue.copy(0.3f)),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Icon(
+                                if (isCash) Icons.Rounded.Payments else Icons.Rounded.CreditCard,
+                                null,
+                                tint     = if (isCash) StatusGreen else c.blue,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                if (isCash) "Cash — driver collects on pickup" else "Card / EFT",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (isCash) StatusGreen else c.blue,
+                            )
+                        }
+                    }
+                }
+
                 // Admin actions
                 if (currentStatus !in listOf("COMPLETED", "CANCELLED")) {
                     Spacer(Modifier.height(4.dp))
