@@ -5,10 +5,21 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
 import com.google.android.libraries.places.api.Places
 import com.kntransport.app.network.ApiClient
 
-class KntApplication : Application() {
+class KntApplication : Application(), SingletonImageLoader.Factory {
+
+    override fun newImageLoader(context: android.content.Context): ImageLoader =
+        ImageLoader.Builder(context)
+            .crossfade(true)
+            // Don't cache error results — a freshly uploaded avatar must load immediately
+            .components { add(OkHttpNetworkFetcherFactory()) }
+            .build()
 
     override fun onCreate() {
         super.onCreate()

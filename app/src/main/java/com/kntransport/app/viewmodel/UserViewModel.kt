@@ -1,15 +1,20 @@
 package com.kntransport.app.viewmodel
 
-import android.net.Uri
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kntransport.app.network.ApiResult
 import com.kntransport.app.network.UserDto
 import com.kntransport.app.repository.UserRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -81,10 +86,33 @@ class UserViewModel : ViewModel() {
 
     fun resetUpdateState() { _updateState.value = null }
 
-    private fun uriToFile(context: Context, uri: Uri): File? = try {
-        val input  = context.contentResolver.openInputStream(uri) ?: return null
-        val file   = File(context.cacheDir, "avatar_upload.jpg")
-        FileOutputStream(file).use { out -> input.copyTo(out) }
-        file
-    } catch (_: Exception) { null }
+    private suspend fun uriToFile(context: Context, uri: Uri): File? =
+        withContext(Dispatchers.IO) {
+            try {
+                val input = context.contentResolver.openInputStream(uri) ?: return@withContext null
+
+                // Decode → scale down to max 1024px on longest side → compress to JPEG 85%
+                val original = BitmapFactory.decodeStream(input)
+                input.close()
+
+                val maxDim   = 1024
+                val scaled   = if (original.width > maxDim || original.height > maxDim) {
+                    val ratio  = maxDim.toFloat() / maxOf(original.width, original.height)
+                    Bitmap.createScaledBitmap(
+                        original,
+                        (original.width  * ratio).toInt(),
+                        (original.height * ratio).toInt(),
+                        true,
+                    ).also { if (it !== original) original.recycle() }
+                } else original
+
+                val out  = ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                scaled.recycle()
+
+                val file = File(context.cacheDir, "avatar_upload.jpg")
+                FileOutputStream(file).use { it.write(out.toByteArray()) }
+                file
+            } catch (_: Exception) { null }
+        }
 }

@@ -165,6 +165,8 @@ fun UserAvatar(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(imageData)
+                    .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+                    .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                     .build(),
                 contentDescription = name,
                 contentScale       = ContentScale.Crop,
