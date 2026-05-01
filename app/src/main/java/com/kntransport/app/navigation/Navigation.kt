@@ -91,7 +91,8 @@ fun KntNavHost(
         composable(Routes.ONBOARDING) {
             OnboardingScreen(onFinished = {
                 onOnboardingDone()
-                navController.navigate(Routes.SPLASH) {
+                // Go directly to login — no need to replay the splash on first launch
+                navController.navigate(Routes.LOGIN) {
                     popUpTo(Routes.ONBOARDING) { inclusive = true }
                 }
             })

@@ -19,17 +19,18 @@ import androidx.compose.ui.unit.*
 import com.kntransport.app.R
 import com.kntransport.app.ui.components.*
 import com.kntransport.app.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 
 private data class OnboardingPage(
-    val heroRes    : Int,
-    val icon       : androidx.compose.ui.graphics.vector.ImageVector,
-    val iconTint   : Color,
-    val title      : String,
-    val subtitle   : String,
+    val heroRes  : Int,
+    val icon     : androidx.compose.ui.graphics.vector.ImageVector,
+    val iconTint : Color,
+    val title    : String,
+    val subtitle : String,
 )
 
 private val PAGES = listOf(
@@ -62,80 +63,27 @@ fun OnboardingScreen(onFinished: () -> Unit) {
     val pagerState = rememberPagerState { PAGES.size }
     val scope      = rememberCoroutineScope()
     val isLast     = pagerState.currentPage == PAGES.lastIndex
-
-    // Measure the nav-bar inset once so both layers use the same value
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    // Controls section height: dots(8) + gap(24) + button(54) + gap(10) + skip(~36) + bottom padding(48) + navBar
-    // We use SubcomposeLayout via BoxWithConstraints to let the controls declare their own height,
-    // then pass that height down to the pager content as bottom padding.
+    // Show swipe hint arrow on first page only, fades after 2 seconds
+    var showSwipeHint by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(2200)
+        showSwipeHint = false
+    }
+    // Also hide it as soon as the user swipes
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage > 0) showSwipeHint = false
+    }
+
+    // Controls height: dots row(8) + gap(8) + counter(18) + gap(24) + button(54) + gap(10) + skip(40)
+    val controlsHeight    = 8.dp + 8.dp + 18.dp + 24.dp + 54.dp + 10.dp + 40.dp
+    val controlsBottomPad = 48.dp + navBarPadding
+    val contentClearance  = controlsHeight + controlsBottomPad + 16.dp
+
     Box(Modifier.fillMaxSize().background(KntBlack)) {
 
-        // ── Bottom controls — rendered first so we can read their height ──────
-        val controlsBottomPadding = 48.dp + navBarPadding
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .padding(bottom = controlsBottomPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Page dots
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(PAGES.size) { idx ->
-                    val isSelected = idx == pagerState.currentPage
-                    val width by animateDpAsState(
-                        targetValue   = if (isSelected) 24.dp else 8.dp,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                        label         = "dot",
-                    )
-                    Box(
-                        Modifier.height(8.dp).width(width)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isSelected) KntYellow else KntMuted.copy(0.4f))
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Action button
-            Button(
-                onClick = {
-                    if (isLast) onFinished()
-                    else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-                },
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = KntBlue, contentColor = Color.White),
-            ) {
-                Text(
-                    if (isLast) "Get Started" else "Next",
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    if (isLast) Icons.Rounded.RocketLaunch else Icons.Rounded.ArrowForward,
-                    null, modifier = Modifier.size(18.dp),
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Skip
-            if (!isLast) {
-                TextButton(onClick = onFinished) {
-                    Text("Skip", style = MaterialTheme.typography.labelLarge, color = KntMuted)
-                }
-            }
-        }
-
-        // ── Pager — sits behind the controls, content padded so it never overlaps ──
-        // Controls occupy approx: dots(8) + gap(24) + button(54) + skip(48) + bottomPad(48) + navBar
-        val contentClearance = 8.dp + 24.dp + 54.dp + 48.dp + 48.dp + navBarPadding
-
+        // ── Pager (behind controls) ───────────────────────────────────────────
         HorizontalPager(
             state    = pagerState,
             modifier = Modifier.fillMaxSize(),
@@ -144,7 +92,6 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             Box(Modifier.fillMaxSize()) {
                 HeroBgImage(resId = p.heroRes, modifier = Modifier.fillMaxSize(), darkOverlay = 0.72f)
 
-                // Dark gradient scrim over bottom portion for text readability
                 Box(
                     Modifier.fillMaxSize().background(
                         Brush.verticalGradient(
@@ -154,16 +101,15 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                     )
                 )
 
+                // Page content — pinned above controls
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 32.dp)
-                        // Clear exactly the controls height + a comfortable gap
-                        .padding(bottom = contentClearance + 16.dp),
+                        .padding(bottom = contentClearance),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    // Icon badge
                     Box(
                         Modifier.size(64.dp).clip(RoundedCornerShape(18.dp))
                             .background(p.iconTint.copy(0.18f))
@@ -187,5 +133,141 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                 }
             }
         }
+
+        // ── Swipe hint — animated chevrons, first page only ───────────────────
+        AnimatedVisibility(
+            visible = showSwipeHint,
+            enter   = fadeIn(tween(400)),
+            exit    = fadeOut(tween(600)),
+            modifier = Modifier.align(Alignment.Center).offset(y = 60.dp),
+        ) {
+            SwipeHint()
+        }
+
+        // ── Bottom controls ───────────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp)
+                .padding(bottom = controlsBottomPad),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Page dots
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                repeat(PAGES.size) { idx ->
+                    val isSelected = idx == pagerState.currentPage
+                    val width by animateDpAsState(
+                        targetValue   = if (isSelected) 24.dp else 8.dp,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                        label         = "dot",
+                    )
+                    Box(
+                        Modifier.height(8.dp).width(width)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isSelected) KntYellow else KntMuted.copy(0.4f))
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Page counter e.g. "1 of 3"
+            Text(
+                "${pagerState.currentPage + 1} of ${PAGES.size}",
+                style = MaterialTheme.typography.labelSmall.copy(color = KntMuted.copy(0.7f)),
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // Next / Get Started button
+            Button(
+                onClick = {
+                    if (isLast) onFinished()
+                    else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                },
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = if (isLast) StatusGreen else KntBlue,
+                    contentColor   = Color.White,
+                ),
+            ) {
+                Text(
+                    if (isLast) "Get Started" else "Next",
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    if (isLast) Icons.Rounded.RocketLaunch else Icons.Rounded.ArrowForward,
+                    null, modifier = Modifier.size(18.dp),
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Skip — always visible so the user always has an out
+            TextButton(
+                onClick  = onFinished,
+                modifier = Modifier.height(40.dp),
+            ) {
+                Text(
+                    if (isLast) "Sign In instead" else "Skip",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = KntMuted,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwipeHint() {
+    val infiniteTransition = rememberInfiniteTransition(label = "swipeHint")
+    val offset by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = 12f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "swipeOffset",
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue  = 0.4f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "swipeAlpha",
+    )
+
+    Row(
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier              = Modifier.offset(x = offset.dp),
+    ) {
+        // Two trailing chevrons — classic swipe-right affordance
+        Icon(
+            Icons.Rounded.ChevronRight, null,
+            tint     = KntWhite.copy(alpha = alpha * 0.5f),
+            modifier = Modifier.size(20.dp),
+        )
+        Icon(
+            Icons.Rounded.ChevronRight, null,
+            tint     = KntWhite.copy(alpha = alpha),
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(Modifier.width(2.dp))
+        Text(
+            "Swipe",
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = KntWhite.copy(alpha = alpha),
+            ),
+        )
     }
 }
