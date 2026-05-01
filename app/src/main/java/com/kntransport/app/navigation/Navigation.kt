@@ -14,6 +14,7 @@ import com.kntransport.app.network.UserDto
 import com.kntransport.app.network.VehicleDto
 import com.kntransport.app.ui.screens.*
 import com.kntransport.app.viewmodel.AdminViewModel
+import com.kntransport.app.viewmodel.UserViewModel
 
 object Routes {
     const val ONBOARDING      = "onboarding"
@@ -80,6 +81,7 @@ fun KntNavHost(
     onOnboardingDone : () -> Unit = {},
 ) {
     val adminViewModel: AdminViewModel = viewModel()
+    val userViewModel : UserViewModel  = viewModel()
     // Holds selected objects so detail screens can read them without serialising into the route.
     var selectedNotification by remember { mutableStateOf<AppNotification?>(null) }
     var selectedAdminUser    by remember { mutableStateOf<UserDto?>(null) }
@@ -153,6 +155,7 @@ fun KntNavHost(
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                viewModel  = userViewModel,
             )
         }
 
@@ -183,6 +186,7 @@ fun KntNavHost(
                 onNotifications   = { navController.navigate(Routes.NOTIFICATIONS) },
                 onProfile         = { navController.navigate(Routes.PROFILE) },
                 onTripDetail      = { id -> navController.navigate(Routes.tripDetail(id)) },
+                userViewModel     = userViewModel,
             )
         }
 
@@ -318,6 +322,7 @@ fun KntNavHost(
                 onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
                 onTerms       = { navController.navigate(Routes.TERMS) },
                 onPrivacy     = { navController.navigate(Routes.PRIVACY) },
+                viewModel     = userViewModel,
             )
         }
 
@@ -335,8 +340,9 @@ fun KntNavHost(
 
         composable(Routes.EDIT_PROFILE) {
             EditProfileScreen(
-                onBack  = { navController.popBackStack() },
-                onSaved = { navController.popBackStack() },
+                onBack    = { navController.popBackStack() },
+                onSaved   = { navController.popBackStack() },
+                viewModel = userViewModel,
             )
         }
 
@@ -353,6 +359,7 @@ fun KntNavHost(
                 onProfile          = { navController.navigate(Routes.PROFILE) },
                 onNotifications    = { navController.navigate(Routes.NOTIFICATIONS) },
                 onTripDetail       = { id -> navController.navigate(Routes.driverTripDetail(id)) },
+                userViewModel      = userViewModel,
             )
         }
 
@@ -389,16 +396,17 @@ fun KntNavHost(
 
         composable(Routes.ADMIN_DASHBOARD) {
             AdminDashboardScreen(
-                onBack       = {
+                onBack        = {
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
-                onUsers      = { navController.navigate(Routes.ADMIN_USERS) },
-                onTrips      = { navController.navigate(Routes.ADMIN_TRIPS) },
-                onAnalytics  = { navController.navigate(Routes.ADMIN_ANALYTICS) },
-                onFinancials = { navController.navigate(Routes.ADMIN_FINANCIALS) },
-                onFleet      = { navController.navigate(Routes.ADMIN_FLEET) },
-                onProfile    = { navController.navigate(Routes.PROFILE) },
-                viewModel    = adminViewModel,
+                onUsers       = { navController.navigate(Routes.ADMIN_USERS) },
+                onTrips       = { navController.navigate(Routes.ADMIN_TRIPS) },
+                onAnalytics   = { navController.navigate(Routes.ADMIN_ANALYTICS) },
+                onFinancials  = { navController.navigate(Routes.ADMIN_FINANCIALS) },
+                onFleet       = { navController.navigate(Routes.ADMIN_FLEET) },
+                onProfile     = { navController.navigate(Routes.PROFILE) },
+                viewModel     = adminViewModel,
+                userViewModel = userViewModel,
             )
         }
 
