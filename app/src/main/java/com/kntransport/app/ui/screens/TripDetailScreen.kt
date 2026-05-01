@@ -133,23 +133,27 @@ fun TripDetailScreen(
         onDispose { viewModel.stopLocationPolling() }
     }
 
-    // Live countdown for confirmed/in-progress trips
+    // Live countdown for confirmed/in-progress trips — guarded against parse failures
     var countdownText by remember { mutableStateOf("") }
     LaunchedEffect(dto.id, currentStatus) {
         if (currentStatus in listOf("CONFIRMED", "IN_PROGRESS")) {
-            val pickupDateTime = LocalDateTime.of(date, time)
-            while (true) {
-                val now  = LocalDateTime.now()
-                val diff = java.time.Duration.between(now, pickupDateTime)
-                countdownText = if (diff.isNegative) {
-                    if (currentStatus == "IN_PROGRESS") "En Route" else "Departed"
-                } else {
-                    val h = diff.toHours()
-                    val m = diff.toMinutesPart()
-                    val s = diff.toSecondsPart()
-                    if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+            try {
+                val pickupDateTime = LocalDateTime.of(date, time)
+                while (true) {
+                    val now  = LocalDateTime.now()
+                    val diff = java.time.Duration.between(now, pickupDateTime)
+                    countdownText = if (diff.isNegative) {
+                        if (currentStatus == "IN_PROGRESS") "En Route" else "Departed"
+                    } else {
+                        val h = diff.toHours()
+                        val m = diff.toMinutesPart()
+                        val s = diff.toSecondsPart()
+                        if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+                    }
+                    kotlinx.coroutines.delay(1000)
                 }
-                kotlinx.coroutines.delay(1000)
+            } catch (_: Exception) {
+                countdownText = if (currentStatus == "IN_PROGRESS") "En Route" else ""
             }
         }
     }
@@ -357,7 +361,7 @@ fun TripDetailScreen(
 
             // ── Cancel button ─────────────────────────────────────────────
             val cancellable = currentStatus in listOf(
-                "PENDING_QUOTE", "QUOTE_SENT", "QUOTE_ACCEPTED", "CONFIRMED",
+                "PENDING_QUOTE", "QUOTE_SENT", "QUOTE_ACCEPTED", "CONFIRMED", "IN_PROGRESS",
             )
             if (cancellable) {
                 Spacer(Modifier.height(16.dp))

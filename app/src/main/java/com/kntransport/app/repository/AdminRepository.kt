@@ -61,8 +61,17 @@ class AdminRepository {
     suspend fun listAllTrips() =
         safeApiCall { api.adminListTrips() }
 
+    suspend fun getTrip(tripId: String) =
+        safeApiCall { api.adminGetTrip(tripId) }
+
     suspend fun assignDriver(tripId: String, driverId: String) =
         safeApiCall { api.adminAssignDriver(tripId, AssignDriverRequest(driverId)) }
+
+    suspend fun cancelTrip(tripId: String, reason: String, note: String = "") =
+        safeApiCall { api.adminCancelTrip(tripId, CancelTripRequest(reason, note)) }
+
+    suspend fun updateQuote(tripId: String, amount: Double) =
+        safeApiCall { api.adminUpdateQuote(tripId, mapOf("amount" to amount)) }
 
     // ── Analytics & Financials ────────────────────────────────────────────────
 

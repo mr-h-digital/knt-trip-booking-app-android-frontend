@@ -22,8 +22,9 @@ import com.kntransport.app.viewmodel.AdminViewModel
 
 @Composable
 fun AdminTripsScreen(
-    onBack    : () -> Unit,
-    viewModel : AdminViewModel = viewModel(),
+    onBack       : () -> Unit,
+    onTripDetail : (String) -> Unit = {},
+    viewModel    : AdminViewModel = viewModel(),
 ) {
     val c          = LocalAppColors.current
     val tripsState by viewModel.allTrips.collectAsState()
@@ -87,7 +88,9 @@ fun AdminTripsScreen(
                         Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             filtered.forEachIndexed { idx, trip ->
-                                StaggeredItem(index = idx) { AdminTripCard(trip = trip) }
+                                StaggeredItem(index = idx) {
+                                    AdminTripCard(trip = trip, onClick = { onTripDetail(trip.id) })
+                                }
                             }
                             Spacer(Modifier.height(32.dp))
                         }
@@ -99,9 +102,9 @@ fun AdminTripsScreen(
 }
 
 @Composable
-private fun AdminTripCard(trip: TripBookingDto) {
+private fun AdminTripCard(trip: TripBookingDto, onClick: () -> Unit = {}) {
     val c = LocalAppColors.current
-    KntCard {
+    KntCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(trip.commuterName ?: "Commuter", style = MaterialTheme.typography.titleSmall, color = c.textBright)

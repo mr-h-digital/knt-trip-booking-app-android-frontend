@@ -138,8 +138,17 @@ interface ApiService {
         @Query("size") size: Int = 50,
     ): Response<PagedResponse<TripBookingDto>>
 
+    @GET("api/admin/trips/{tripId}")
+    suspend fun adminGetTrip(@Path("tripId") tripId: String): Response<TripBookingDto>
+
     @PATCH("api/admin/trips/{tripId}/assign-driver")
     suspend fun adminAssignDriver(@Path("tripId") tripId: String, @Body request: AssignDriverRequest): Response<TripBookingDto>
+
+    @PATCH("api/admin/trips/{tripId}/cancel")
+    suspend fun adminCancelTrip(@Path("tripId") tripId: String, @Body request: CancelTripRequest): Response<TripBookingDto>
+
+    @PATCH("api/admin/trips/{tripId}/quote")
+    suspend fun adminUpdateQuote(@Path("tripId") tripId: String, @Body body: Map<String, Double>): Response<TripBookingDto>
 
     // ── Admin — Analytics & Financials ────────────────────────────────────────
     @GET("api/admin/analytics")

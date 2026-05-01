@@ -176,6 +176,12 @@ class AdminViewModel : ViewModel() {
     private val _allTrips = MutableStateFlow<ApiResult<List<TripBookingDto>>>(ApiResult.Loading)
     val allTrips: StateFlow<ApiResult<List<TripBookingDto>>> = _allTrips
 
+    private val _selectedTrip = MutableStateFlow<ApiResult<TripBookingDto>?>(null)
+    val selectedTrip: StateFlow<ApiResult<TripBookingDto>?> = _selectedTrip
+
+    private val _tripActionState = MutableStateFlow<ApiResult<TripBookingDto>?>(null)
+    val tripActionState: StateFlow<ApiResult<TripBookingDto>?> = _tripActionState
+
     fun loadAllTrips() {
         viewModelScope.launch {
             _allTrips.value = ApiResult.Loading
@@ -187,6 +193,39 @@ class AdminViewModel : ViewModel() {
             }
         }
     }
+
+    fun loadTrip(tripId: String) {
+        viewModelScope.launch {
+            _selectedTrip.value = ApiResult.Loading
+            _selectedTrip.value = repo.getTrip(tripId)
+        }
+    }
+
+    fun cancelTrip(tripId: String, reason: String, note: String = "") {
+        viewModelScope.launch {
+            _tripActionState.value = ApiResult.Loading
+            _tripActionState.value = repo.cancelTrip(tripId, reason, note)
+        }
+    }
+
+    fun updateQuote(tripId: String, amount: Double) {
+        viewModelScope.launch {
+            _tripActionState.value = ApiResult.Loading
+            _tripActionState.value = repo.updateQuote(tripId, amount)
+        }
+    }
+
+    fun assignDriver(tripId: String, driverId: String) {
+        viewModelScope.launch {
+            _tripActionState.value = ApiResult.Loading
+            val result = repo.assignDriver(tripId, driverId)
+            _tripActionState.value = result
+            if (result is ApiResult.Success) loadAllTrips()
+        }
+    }
+
+    fun resetTripActionState() { _tripActionState.value = null }
+    fun resetSelectedTrip()    { _selectedTrip.value = null }
 
     // ── Analytics ─────────────────────────────────────────────────────────────
 

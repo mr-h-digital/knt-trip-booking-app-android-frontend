@@ -59,6 +59,9 @@ object Routes {
     const val ADMIN_ADD_VEHICLE    = "admin_add_vehicle"
     const val ADMIN_EDIT_VEHICLE   = "admin_edit_vehicle"
     const val ADMIN_TRIPS          = "admin_trips"
+    const val ADMIN_TRIP_DETAIL    = "admin_trip_detail/{tripId}"
+
+    fun adminTripDetail(id: String) = "admin_trip_detail/$id"
 
     fun rateTrip(id: String) = "rate_trip/$id"
 
@@ -473,6 +476,19 @@ fun KntNavHost(
 
         composable(Routes.ADMIN_TRIPS) {
             AdminTripsScreen(
+                onBack       = { navController.popBackStack() },
+                onTripDetail = { id -> navController.navigate(Routes.adminTripDetail(id)) },
+                viewModel    = adminViewModel,
+            )
+        }
+
+        composable(
+            route     = Routes.ADMIN_TRIP_DETAIL,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+        ) { back ->
+            val tripId = back.arguments?.getString("tripId") ?: return@composable
+            AdminTripDetailScreen(
+                tripId    = tripId,
                 onBack    = { navController.popBackStack() },
                 viewModel = adminViewModel,
             )
