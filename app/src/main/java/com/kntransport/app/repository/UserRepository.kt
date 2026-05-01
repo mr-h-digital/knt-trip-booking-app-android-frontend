@@ -18,8 +18,8 @@ class UserRepository {
     suspend fun acceptTerms() = safeApiCall { api.acceptTerms() }
 
     suspend fun uploadAvatar(file: File): ApiResult<UserDto> {
-        val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
-        val part = MultipartBody.Part.createFormData("avatar", file.name, requestBody)
+        val requestBody = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("avatar", "${file.nameWithoutExtension}.jpg", requestBody)
         return safeApiCall { api.uploadAvatar(part) }
     }
 }
