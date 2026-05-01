@@ -117,6 +117,14 @@ fun ProfileScreen(
                     Text(name, style = MaterialTheme.typography.headlineMedium, color = c.textOnBg)
                     Text(role.lowercase().replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.bodySmall, color = c.textOnBg.copy(alpha = 0.65f))
+                    // DEBUG — shows the stored avatarUrl so we can verify what's in _profile
+                    Text(
+                        text  = "url: ${apiUser?.avatarUrl ?: "NULL"}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                        color = c.textOnBg.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        maxLines = 3,
+                    )
                 }
             }
 

@@ -5,20 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import coil3.ImageLoader
-import coil3.SingletonImageLoader
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.google.android.libraries.places.api.Places
 import com.kntransport.app.network.ApiClient
 
-class KntApplication : Application(), SingletonImageLoader.Factory {
-
-    override fun newImageLoader(context: android.content.Context): ImageLoader =
-        ImageLoader.Builder(context)
-            // Reuse the same OkHttpClient as the API — inherits trust-all SSL in debug
-            // so corporate HTTPS inspection doesn't block Cloudflare R2 image loads
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { ApiClient.httpClient })) }
-            .build()
+class KntApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()

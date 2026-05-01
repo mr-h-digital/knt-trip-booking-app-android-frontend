@@ -158,42 +158,42 @@ fun UserAvatar(
         else -> null
     }
 
-    // null  = loading/unknown, true = loaded OK, false = failed
-    var imageState by remember(imageData) { mutableStateOf<Boolean?>(null) }
+    var loadSuccess by remember(imageData) { mutableStateOf(false) }
 
     Box(baseMod, contentAlignment = Alignment.Center) {
-        if (imageData != null) {
-            AsyncImage(
-                model              = ImageRequest.Builder(context).data(imageData).build(),
-                contentDescription = name,
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier.fillMaxSize(),
-                onSuccess          = {
-                    android.util.Log.d("UserAvatar", "Loaded OK: $imageData")
-                    imageState = true
-                },
-                onError            = { err ->
-                    android.util.Log.e("UserAvatar", "Failed: $imageData — ${err.result.throwable}")
-                    imageState = false
-                },
+        // Initials — always rendered, hidden by the image once it loads successfully
+        Box(
+            Modifier.fillMaxSize()
+                .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text  = initials,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    color      = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize   = (size.value * 0.34f).sp,
+                ),
             )
         }
-        // Show initials while loading (null) or on failure (false); hide on success (true)
-        if (imageData == null || imageState != true) {
-            Box(
-                Modifier.fillMaxSize()
-                    .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text  = initials,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        color      = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize   = (size.value * 0.34f).sp,
-                    ),
-                )
-            }
+        // Image overlaid on top — fills the box when loaded successfully
+        if (imageData != null) {
+            AsyncImage(
+                model              = imageData,
+                contentDescription = name,
+                contentScale       = ContentScale.Crop,
+                modifier           = Modifier.fillMaxSize().then(
+                    if (!loadSuccess) Modifier.then(Modifier) else Modifier
+                ),
+                onSuccess = {
+                    android.util.Log.d("UserAvatar", "Loaded OK: $imageData")
+                    loadSuccess = true
+                },
+                onError   = { err ->
+                    android.util.Log.e("UserAvatar", "FAILED: $imageData — ${err.result.throwable?.message}")
+                    loadSuccess = false
+                },
+            )
         }
     }
 }
