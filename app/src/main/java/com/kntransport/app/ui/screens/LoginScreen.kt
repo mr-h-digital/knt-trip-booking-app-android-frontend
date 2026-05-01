@@ -29,7 +29,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
-    onLogin          : (role: String) -> Unit,
+    onLogin          : (role: String, termsAccepted: Boolean) -> Unit,
     onSignUp         : () -> Unit,
     onForgotPassword : () -> Unit = {},
     viewModel        : AuthViewModel = viewModel(),
@@ -52,7 +52,7 @@ fun LoginScreen(
         when (val s = loginState) {
             is ApiResult.Success -> {
                 viewModel.resetLoginState()
-                onLogin(s.data.role)
+                onLogin(s.data.role, s.data.user.termsAcceptedAt != null)
             }
             is ApiResult.Error -> {
                 errorMessage = s.message

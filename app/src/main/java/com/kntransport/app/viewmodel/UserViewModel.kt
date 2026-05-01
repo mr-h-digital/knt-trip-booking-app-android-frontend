@@ -72,6 +72,13 @@ class UserViewModel : ViewModel() {
         }
     }
 
+    fun acceptTerms() {
+        viewModelScope.launch {
+            _updateState.value = ApiResult.Loading
+            _updateState.value = repo.acceptTerms()
+        }
+    }
+
     fun resetUpdateState() { _updateState.value = null }
 
     private fun uriToFile(context: Context, uri: Uri): File? = try {

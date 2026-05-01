@@ -38,6 +38,7 @@ data class UserDto(
     @SerializedName("currentVehiclePlate")   val currentVehiclePlate   : String? = null,
     @SerializedName("currentVehicleType")    val currentVehicleType    : String? = null,
     @SerializedName("currentVehiclePhotoUrl")val currentVehiclePhotoUrl: String? = null,
+    @SerializedName("termsAcceptedAt")       val termsAcceptedAt       : String? = null,
 )
 
 data class UpdateProfileRequest(

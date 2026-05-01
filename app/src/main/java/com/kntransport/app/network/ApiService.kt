@@ -20,6 +20,9 @@ interface ApiService {
     @PUT("api/users/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserDto>
 
+    @PATCH("api/users/me/accept-terms")
+    suspend fun acceptTerms(): Response<UserDto>
+
     @Multipart
     @POST("api/users/me/avatar")
     suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): Response<UserDto>

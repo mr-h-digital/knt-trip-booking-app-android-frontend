@@ -15,6 +15,8 @@ class UserRepository {
     suspend fun updateProfile(name: String, email: String, phone: String) =
         safeApiCall { api.updateProfile(UpdateProfileRequest(name, email, phone)) }
 
+    suspend fun acceptTerms() = safeApiCall { api.acceptTerms() }
+
     suspend fun uploadAvatar(file: File): ApiResult<UserDto> {
         val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
         val part = MultipartBody.Part.createFormData("avatar", file.name, requestBody)

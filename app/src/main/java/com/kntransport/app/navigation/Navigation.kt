@@ -37,6 +37,9 @@ object Routes {
     const val RATE_TRIP       = "rate_trip/{tripId}"
     const val TERMS           = "terms"
     const val PRIVACY         = "privacy"
+    const val ACCEPT_TERMS    = "accept_terms/{dest}"
+
+    fun acceptTerms(dest: String) = "accept_terms/$dest"
 
     // Driver
     const val DRIVER_DASHBOARD        = "driver_dashboard"
@@ -110,18 +113,46 @@ fun KntNavHost(
 
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLogin = { role ->
+                onLogin = { role, termsAccepted ->
                     val dest = when (role.uppercase()) {
                         "ADMIN"  -> Routes.ADMIN_DASHBOARD
                         "DRIVER" -> Routes.DRIVER_DASHBOARD
                         else     -> Routes.HOME
                     }
-                    navController.navigate(dest) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    if (termsAccepted) {
+                        navController.navigate(dest) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    } else {
+                        // Existing user who hasn't accepted yet — show the gate first
+                        navController.navigate(Routes.acceptTerms(dest)) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
                     }
                 },
                 onSignUp         = { navController.navigate(Routes.SIGN_UP) },
                 onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
+            )
+        }
+
+        composable(
+            route     = Routes.ACCEPT_TERMS,
+            arguments = listOf(navArgument("dest") { type = NavType.StringType }),
+        ) { back ->
+            val dest = back.arguments?.getString("dest") ?: Routes.HOME
+            AcceptTermsScreen(
+                onAccepted = {
+                    navController.navigate(dest) {
+                        popUpTo(Routes.ACCEPT_TERMS) { inclusive = true }
+                    }
+                },
+                onTerms    = { navController.navigate(Routes.TERMS) },
+                onPrivacy  = { navController.navigate(Routes.PRIVACY) },
+                onSignOut  = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
 
