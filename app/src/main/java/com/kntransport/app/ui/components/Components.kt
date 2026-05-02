@@ -158,43 +158,52 @@ fun UserAvatar(
         else -> null
     }
 
-    var loadSuccess by remember(imageData) { mutableStateOf(false) }
-
     Box(baseMod, contentAlignment = Alignment.Center) {
-        // Initials — always rendered, hidden by the image once it loads successfully
-        Box(
-            Modifier.fillMaxSize()
-                .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text  = initials,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    color      = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize   = (size.value * 0.34f).sp,
-                ),
-            )
-        }
-        // Image overlaid on top — fills the box when loaded successfully
         if (imageData != null) {
-            AsyncImage(
+            coil3.compose.SubcomposeAsyncImage(
                 model              = imageData,
                 contentDescription = name,
+                modifier           = Modifier.fillMaxSize(),
                 contentScale       = ContentScale.Crop,
-                modifier           = Modifier.fillMaxSize().then(
-                    if (!loadSuccess) Modifier.then(Modifier) else Modifier
-                ),
-                onSuccess = {
+            ) {
+                val state = painter.state
+                if (state is coil3.compose.AsyncImagePainter.State.Success) {
                     android.util.Log.d("UserAvatar", "Loaded OK: $imageData")
-                    loadSuccess = true
-                },
-                onError   = { err ->
-                    android.util.Log.e("UserAvatar", "FAILED: $imageData — ${err.result.throwable?.message}")
-                    loadSuccess = false
-                },
-            )
+                    Image(
+                        painter            = painter,
+                        contentDescription = name,
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    if (state is coil3.compose.AsyncImagePainter.State.Error) {
+                        android.util.Log.e("UserAvatar", "FAILED: $imageData — ${state.result.throwable?.message}")
+                    }
+                    InitialsBox(initials = initials, size = size)
+                }
+            }
+        } else {
+            InitialsBox(initials = initials, size = size)
         }
+    }
+}
+
+@Composable
+private fun InitialsBox(initials: String, size: Dp) {
+    val c = LocalAppColors.current
+    Box(
+        Modifier.fillMaxSize()
+            .background(Brush.linearGradient(listOf(c.blue, c.yellow.copy(0.75f)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text  = initials,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                color      = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize   = (size.value * 0.34f).sp,
+            ),
+        )
     }
 }
 
