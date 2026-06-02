@@ -8,6 +8,7 @@ class AuthRepository {
     private val tm  by lazy { ApiClient.getTokenManager() }
 
     suspend fun login(email: String, password: String): ApiResult<AuthResponse> {
+        tm.clearAll()
         val result = safeApiCall { api.login(LoginRequest(email, password)) }
         if (result is ApiResult.Success) {
             tm.saveToken(result.data.token)

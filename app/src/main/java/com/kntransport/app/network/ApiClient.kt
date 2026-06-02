@@ -58,6 +58,18 @@ object ApiClient {
         return builder.build()
     }
 
+    /**
+     * Builds an OkHttpClient suitable for Coil image loading: trust-all SSL in debug
+     * plus the auth interceptor so protected avatar URLs load correctly.
+     * Called lazily after ApiClient.init() has been called.
+     */
+    fun buildCoilClient(): OkHttpClient =
+        buildBaseClient().newBuilder()
+            .addInterceptor(AuthInterceptor(
+                tokenManager ?: error("ApiClient.init(context) must be called before image loading")
+            ))
+            .build()
+
     private fun buildRetrofit(tm: TokenManager, baseClient: OkHttpClient): Retrofit {
         val logging = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY

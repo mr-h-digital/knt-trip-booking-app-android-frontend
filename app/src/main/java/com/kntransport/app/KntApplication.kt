@@ -5,10 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
 import com.google.android.libraries.places.api.Places
 import com.kntransport.app.network.ApiClient
 
-class KntApplication : Application() {
+class KntApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
@@ -22,6 +26,12 @@ class KntApplication : Application() {
         }
         createNotificationChannels()
     }
+
+    override fun newImageLoader(context: android.content.Context): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(OkHttpNetworkFetcherFactory(callFactory = { ApiClient.buildCoilClient() })) }
+            .crossfade(true)
+            .build()
 
     private fun createNotificationChannels() {
         val manager = getSystemService(NotificationManager::class.java)

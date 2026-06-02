@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.kntransport.app.network.observeConnectivity
 import androidx.compose.ui.unit.*
 import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.kntransport.app.R
 import com.kntransport.app.data.TripStatus
@@ -160,8 +161,13 @@ fun UserAvatar(
 
     Box(baseMod, contentAlignment = Alignment.Center) {
         if (imageData != null) {
+            val request = ImageRequest.Builder(context)
+                .data(imageData)
+                // Disable disk cache so a re-upload with the same URL path is always fetched fresh.
+                .diskCachePolicy(CachePolicy.DISABLED)
+                .build()
             coil3.compose.SubcomposeAsyncImage(
-                model              = imageData,
+                model              = request,
                 contentDescription = name,
                 modifier           = Modifier.fillMaxSize(),
                 contentScale       = ContentScale.Crop,
