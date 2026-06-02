@@ -163,8 +163,8 @@ fun UserAvatar(
         if (imageData != null) {
             val request = ImageRequest.Builder(context)
                 .data(imageData)
-                // Disable disk cache so a re-upload with the same URL path is always fetched fresh.
                 .diskCachePolicy(CachePolicy.DISABLED)
+                .memoryCachePolicy(CachePolicy.DISABLED)
                 .build()
             coil3.compose.SubcomposeAsyncImage(
                 model              = request,
