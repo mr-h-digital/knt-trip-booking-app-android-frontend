@@ -29,7 +29,7 @@ class KntApplication : Application(), SingletonImageLoader.Factory {
 
     override fun newImageLoader(context: android.content.Context): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { ApiClient.buildCoilClient() })) }
+            .components { add(OkHttpNetworkFetcherFactory(callFactory = { ApiClient.buildBaseClient() })) }
             .crossfade(true)
             .build()
 
